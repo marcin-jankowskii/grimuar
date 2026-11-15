@@ -1,0 +1,3 @@
+-- Grimuar: build domyslny dla klasy zaraz po zaladowaniu buildow wbudowanych (przed Core.lua), R27 E1.
+local ADDON_NAME, G = ...
+if G.BuildBoot then pcall(G.BuildBoot) end

@@ -1,0 +1,13 @@
+<Bindings>
+  <!-- Grimuar UI (14.11): hub jak w Wiedzminie; nazwy w Hub.lua (BINDING_NAME_...). W walce P/N/L/M/K otwieraja okna gry. -->
+  <Binding name="GRIMUAR_HUB" header="GRIMUARUI" category="ADDONS">GrimuarHubToggle()</Binding>
+  <Binding name="GRIMUAR_HUB_POSTAC" category="ADDONS">GrimuarHubOpen("postac")</Binding>
+  <Binding name="GRIMUAR_HUB_CZARY" category="ADDONS">GrimuarHubKey("umiejetnosci", "czary")</Binding>
+  <Binding name="GRIMUAR_HUB_TALENTY" category="ADDONS">GrimuarHubKey("umiejetnosci", "talenty")</Binding>
+  <Binding name="GRIMUAR_HUB_DZIENNIK" category="ADDONS">GrimuarHubKey("dziennik", "dziennik")</Binding>
+  <Binding name="GRIMUAR_HUB_MAPA" category="ADDONS">GrimuarHubKey("mapa", "mapa")</Binding>
+  <Binding name="GRIMUAR_HUB_RZEMIOSLO" category="ADDONS">GrimuarHubKey("rzemioslo", "profesje")</Binding>
+  <Binding name="GRIMUAR_HUB_SPOLECZNOSC" category="ADDONS">GrimuarHubKey("spolecznosc", "znajomi")</Binding>
+  <Binding name="GRIMUAR_SHARE" category="ADDONS">GrimuarShareQuests()</Binding>
+  <Binding name="GRIMUAR_KOLO" category="ADDONS">GrimuarKoloToggle()</Binding>
+</Bindings>

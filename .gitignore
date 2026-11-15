@@ -1,0 +1,8 @@
+# Repozytorium tylko dla Grimuara (folder AddOns zawiera tez inne addony).
+/*
+!/.gitignore
+!/GrimuarSetup/
+!/GrimuarUI/
+!/README.md
+!/CHANGELOG.md
+!/docs/

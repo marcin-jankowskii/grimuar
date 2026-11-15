@@ -1,0 +1,69 @@
+## Interface: 16001
+## Title: Grimuar Setup
+## Notes: Grimuar: ustawienia, buildy, prowadzenie krok po kroku, okno z poradnikiem, samouczek. Shift+G, /gr
+## Notes-enUS: Grimuar: settings, builds, step-by-step guidance, guide window, tutorial. Shift+G, /gr
+## Author: Grimuar
+## X-License: GPL-3.0
+## Version: 5.6.0
+## SavedVariables: GrimuarSetupDB
+## OptionalDeps: Grimuar_Osobiste, Masque, Polestar
+Build\Api.lua
+Locales\Tlumacz.lua
+Locales\enUS.lua
+Locales\enUS_teksty.lua
+Build\Walidacja.lua
+Build\Kod.lua
+Buildy\Mag_Frost.lua
+Build\Start.lua
+Rdzen\Core.lua
+Rdzen\Style.lua
+Rdzen\Engine.lua
+Prowadzenie\Prowadzenie.lua
+Prowadzenie\Kroki.lua
+Prowadzenie\Dock.lua
+Okno\PanelStrony.lua
+Prowadzenie\Ogolne.lua
+Okno\Panel.lua
+Prowadzenie\Samouczek.lua
+Okno\UkladPro.lua
+Okno\Minimapa.lua
+Gospodarka\Vendor.lua
+Kontrola\Addony.lua
+Wyglad\Uklad.lua
+Wyglad\Globy.lua
+Wyglad\Runy.lua
+Wyglad\Ekran.lua
+Okno\Menu.lua
+Okno\MenuPelne.lua
+Wyglad\Skorki.lua
+Wyglad\Prostokat.lua
+Wyglad\Czat.lua
+Wyglad\Maska.lua
+Wyglad\Barwy.lua
+Walka\Klawisze.lua
+Walka\Apteczka.lua
+Wyglad\PlecakRuny.lua
+Wyglad\PlecakPlus.lua
+Wyglad\Wstegi.lua
+Prowadzenie\Sesja.lua
+Walka\Pomocnik.lua
+Kontrola\Kontrola.lua
+Grupa\Lochy.lua
+Grupa\Grupa.lua
+Walka\Dzwieki.lua
+Walka\Grafika.lua
+Prowadzenie\Questy.lua
+Gospodarka\Profesje.lua
+Gospodarka\Kraft.lua
+Gospodarka\OknoProfesji.lua
+Prowadzenie\Rozwoj.lua
+Wyglad\Plaskie.lua
+Wyglad\LatkaFSS.lua
+Gospodarka\Rynek.lua
+Prowadzenie\Trasa.lua
+Gospodarka\Zloto.lua
+Okno\Strony.lua
+Walka\Zgony.lua
+Rdzen\Test.lua
+Gospodarka\Trener.lua
+Rdzen\Events.lua

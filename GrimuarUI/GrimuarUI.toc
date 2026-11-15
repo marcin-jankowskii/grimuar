@@ -1,0 +1,61 @@
+## Interface: 16001
+## Title: Grimuar UI
+## Notes: Hub jak w Wiedźminie (klawisz `): Postać, Buildy, Umiejętności, Dziennik, Mapa, Księga, Rzemiosło, Społeczność, Wyprawy, Kronika, Grimuar. /hub
+## Notes-enUS: Witcher-style hub (` key): character, builds, spells, journal, map, codex, crafting, social, expeditions, chronicle. /hub
+## Author: Grimuar
+## X-License: GPL-3.0
+## Version: 0.15.0
+## Dependencies: GrimuarSetup
+## OptionalDeps: Baganator, Questie, Polestar, GatherMate2
+## SavedVariables: GrimuarUIDB
+Hub\Theme.lua
+Hub\Hub.lua
+Hub\Bloki.lua
+Okna\Rozmowa.lua
+Postac\TabPostac.lua
+Ekwipunek\TabEkwipunek.lua
+Umiejetnosci\Talenty.lua
+Umiejetnosci\TabUmiejetnosci.lua
+Dziennik\DziennikPolestar.lua
+Dziennik\TabDziennik.lua
+Mapa\MapaQuestie.lua
+Mapa\MinimapaZadania.lua
+Mapa\MapaSzukaj.lua
+Mapa\MapaUslugi.lua
+Mapa\MapaLegenda.lua
+Mapa\TabMapa.lua
+Rzemioslo\RzemiosloZbieranie.lua
+Rzemioslo\RzemiosloSurowce.lua
+Rzemioslo\RzemiosloZadania.lua
+Rzemioslo\RzemiosloPolestar.lua
+Rzemioslo\TabRzemioslo.lua
+Spolecznosc\TabSpolecznosc.lua
+Osiagniecia\TabOsiagniecia.lua
+Grimuar\TabGrimuar.lua
+Hud\HudWalka.lua
+Hud\HudEkran.lua
+Hud\HudPaski.lua
+Hud\Kompas.lua
+Spolecznosc\GrupaLatwo.lua
+Kronika\KronikaDane.lua
+Kronika\KronikaKalendarz.lua
+Kronika\KronikaKontrakty.lua
+Kronika\TabKronika.lua
+Ksiega\KsiegaRywale.lua
+Ksiega\KsiegaBestie.lua
+Ksiega\KsiegaKrainy.lua
+Ksiega\TabKsiega.lua
+Postac\ZestawySprzetu.lua
+Hud\KoloMaga.lua
+Hud\Pas.lua
+Grimuar\TrasaRozdzialy.lua
+Wyprawy\WyprawyDane.lua
+Wyprawy\WyprawySync.lua
+Wyprawy\TabWyprawy.lua
+Buildy\BuildyPodglad.lua
+Buildy\TabBuildy.lua
+Buildy\BuildyEdytor.lua
+Buildy\EdytorSekcje.lua
+Buildy\Kreator.lua
+Nowosci\NowosciDane.lua
+Nowosci\TabNowosci.lua

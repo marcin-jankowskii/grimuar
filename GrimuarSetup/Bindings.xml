@@ -1,0 +1,6 @@
+<Bindings>
+  <!-- Grimuar (13.11): wlasne polecenia klawiszy; nazwy w Klawisze.lua (BINDING_NAME_...) -->
+  <Binding name="GRIMUAR_EKWIPUNEK" header="GRIMUAR" category="ADDONS">GrimuarEkwipunek()</Binding>
+  <Binding name="GRIMUAR_POLESTAR" category="ADDONS">GrimuarPolestar()</Binding>
+  <Binding name="GRIMUAR_OKNO" category="ADDONS">GrimuarOkno()</Binding>
+</Bindings>
