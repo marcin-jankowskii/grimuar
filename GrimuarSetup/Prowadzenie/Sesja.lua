@@ -396,6 +396,8 @@ SlashCmdList["GRIMUARPLAN"] = function()
   save()
   say("pytanie o plan jest znowu na pasku Grimuara.")
   refresh()
+  -- 15.11: karta „Ile masz czasu?” w stylu huba (GrimuarUI Hud\StartSesji.lua)
+  if G.planCard then pcall(G.planCard) end
 end
 
 G.sessionSteps = sessionSteps
@@ -408,3 +410,6 @@ G.planView = function()
   return P.plan.items, idx, P.plan.mins
 end
 G.planPending = function() return not P.asked and not GrimuarSetupDB.noPlanAsk end
+-- 15.11: dla karty startu sesji (GrimuarUI Hud\StartSesji.lua)
+G.planChoose = choose
+G.planSkip = function() P.asked = true save() refresh() end

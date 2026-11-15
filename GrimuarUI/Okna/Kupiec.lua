@@ -254,6 +254,11 @@ ev:SetScript("OnEvent", function(_, e)
   if e == "MERCHANT_SHOW" then
     C_Timer.After(0, function()
       build()
+      pcall(function()
+        U.diag("kupiec", { n = U.num(U.call(GetMerchantNumItems)), first = U.raw(GetMerchantItemInfo, 1),
+          c = (C_MerchantFrame and C_MerchantFrame.GetItemInfo) and "C_MerchantFrame" or "stare API",
+          buyback = U.num(U.call(GetNumBuybackItems)) })
+      end)
       S.tab = "build"
       if F:Open() then
         U.kupiecDraw()

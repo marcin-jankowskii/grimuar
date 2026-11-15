@@ -42,5 +42,13 @@ Automatycznie: `/gr test` (moduły GrimuarSetup) i `/hub test` (wszystkie zakła
 | Esc > Ustawienia: hub na cały ekran; strony, przełączniki, suwaki, wybór; wyszukiwarka; znaczek Grimuar | | | | | |
 | Ustawienia > Klawisze: Zmień (klawisz, Shift+, mysz 4, kółko), Usuń; Ustawienia > Makra: edycja, nowe, usuń (2 kliki), Na pasek | | | | | |
 | „klasyczne okno” w każdym oknie; /hub okna kupiec (przełącza na okno gry) | | | | | |
+| 5.8/0.17 `/gr test` po wizycie u kupca, trenera, poczty i banku: linie „UI: …” bez błędów | | | | | |
+| Okno profesji (K): panel poradnika z prawej, pasek, „Zrób N” tworzy, składniki z „w banku” i ceną | | | | | |
+| Łup ręczny (Shift+prawy klik albo pełne torby): okno Grimuara, powód przy przedmiocie, „Zabierz wszystko” | | | | | |
+| Rzut w grupie: karta z podpowiedzią, złoty przycisk, klik rzuca, karta znika | | | | | |
+| Rynek: „◆ Do poradnika” (ilość ustawiona, kupno), Sprzedaj (lista, wadium, wystawienie) | | | | | |
+| Hub > PvP: kafelki, pola bitew, po BG wpis w „Ostatnie mecze” | | | | | |
+| Po wejściu: karta „Ile masz czasu?”, wybór czasu = plan na pasku i w kartach; `/hub start` | | | | | |
+| `/gr jezyk en`: nowe okna po angielsku | | | | | |
 
 Wynik zapisz w CHANGELOG.md przy wersji.

@@ -117,6 +117,14 @@ ev:SetScript("OnEvent", function(_, e)
   if e == "TRAINER_SHOW" then
     C_Timer.After(0.05, function()
       build()
+      pcall(function()
+        local first
+        for i = 1, U.num(U.call(GetNumTrainerServices)) or 0 do
+          local raw = U.raw(GetTrainerServiceInfo, i)
+          if not raw:find("| header", 1, true) then first = raw break end
+        end
+        U.diag("trener", { n = U.num(U.call(GetNumTrainerServices)), first = first, prof = U.call(IsTradeskillTrainer) and true or false })
+      end)
       if F:Open() then U.trenerDraw() end
     end)
   elseif e == "TRAINER_CLOSED" then

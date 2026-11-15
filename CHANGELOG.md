@@ -1,5 +1,25 @@
 # Changelog
 
+## GrimuarSetup 5.8.0 · GrimuarUI 0.17.0 (2026-11-15)
+- **Self-test covers the new windows** (`/gr test`): merchant, trainer, mail and bank record the raw values of the first
+  visit (`GrimuarUIDB.diag`) and the test checks their order, bank tabs, unknown CVars, key binding and macro API, hub
+  tabs and window failures (`GrimuarUIDB.oknaFails`); BugSack counts errors from both addons.
+- **Profession guide panel** next to the profession window (ForeverSkin or the game's): skill bar and next trainer rank,
+  open steps of the current Polestar range with a "Make N" button, reagents with bag and bank counts, auction price
+  (Auctionator) and the guide's vendor (click for the arrow), next ranges. `{item:...}` tokens in guide titles now
+  show names.
+- **Loot as cards**: manual loot window in the hub style (quality, reason: needed for a guide, Pawn upgrade +N%,
+  quest item, junk), "Take all". **Group rolls**: a card per item with advice for your build and Need / Greed /
+  Disenchant / Pass buttons; nothing rolls by itself.
+- **Market**: "◆ For guides" category (what the profession guides still need, quantity preset) and a working "Sell" tab
+  (materials not needed by guides and not favorites; post a commodity at the lowest offer minus 1 copper, 24 h, two clicks).
+- **PvP tab** in the hub: kills, honor, rank, Spy world score, battleground queue, battlegrounds with level, recent
+  matches (saved after each battleground), advice for every class with beta win rate and your Spy score, rivals, rules.
+- **"How much time do you have?"** card at session start (and `/plan`, `/hub start`): 30 min to 3 h builds the session
+  plan as cards, plus "best value right now" with time: rested XP, trainer and talents, contracts, profession step,
+  a dungeon for your level.
+- English strings for the 5.7 and 5.8 windows (`Locales\enUS_okna.lua`); LICENSE at the repository root.
+
 ## GrimuarSetup 5.7.0 · GrimuarUI 0.16.0 (2026-11-15)
 - **Game windows in the hub style** (plan R29): Merchant (goods "for your build" with reasons and "you have N",
   buyback, repair all, bag with right-click sell; junk sells itself when the merchant opens, with one chat line),

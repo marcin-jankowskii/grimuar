@@ -277,6 +277,9 @@ ev:SetScript("OnEvent", function(_, e)
   if e == "MAIL_SHOW" then
     C_Timer.After(0.05, function()
       build()
+      pcall(function()
+        U.diag("poczta", { n = U.raw(GetInboxNumItems), first = U.raw(GetInboxHeaderInfo, 1) })
+      end)
       S.tab, S.sel = "in", nil
       if F:Open() then U.pocztaDraw() end
     end)

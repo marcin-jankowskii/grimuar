@@ -4,7 +4,7 @@
 ## Notes-enUS: Witcher-style hub (` key): character, builds, spells, journal, map, codex, crafting, social, expeditions, chronicle. /hub
 ## Author: Grimuar
 ## X-License: GPL-3.0
-## Version: 0.16.0
+## Version: 0.17.0
 ## Dependencies: GrimuarSetup
 ## OptionalDeps: Baganator, Questie, Polestar, GatherMate2
 ## SavedVariables: GrimuarUIDB
@@ -17,6 +17,8 @@ Okna\Kupiec.lua
 Okna\Trener.lua
 Okna\Poczta.lua
 Okna\Bank.lua
+Okna\Profesja.lua
+Okna\Lup.lua
 Ustawienia\Klawisze.lua
 Ustawienia\Makra.lua
 Ustawienia\TabUstawienia.lua
@@ -53,9 +55,11 @@ Ksiega\KsiegaRywale.lua
 Ksiega\KsiegaBestie.lua
 Ksiega\KsiegaKrainy.lua
 Ksiega\TabKsiega.lua
+Pvp\TabPvp.lua
 Postac\ZestawySprzetu.lua
 Hud\KoloMaga.lua
 Hud\Pas.lua
+Hud\StartSesji.lua
 Grimuar\TrasaRozdzialy.lua
 Wyprawy\WyprawyDane.lua
 Wyprawy\WyprawySync.lua
@@ -67,3 +71,4 @@ Buildy\EdytorSekcje.lua
 Buildy\Kreator.lua
 Nowosci\NowosciDane.lua
 Nowosci\TabNowosci.lua
+Hub\Autotest.lua

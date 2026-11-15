@@ -26,7 +26,7 @@ local function grimuarErrors()
   pcall(function()
     local db, sid = BugGrabber:GetDB(), BugGrabber:GetSessionId()
     for _, e in ipairs(db or {}) do
-      if e.session == sid and tostring(e.message):find("GrimuarSetup") then
+      if e.session == sid and tostring(e.message):find("Grimuar") then
         n = n + 1
         first = first or tostring(e.message):sub(1, 160)
       end
@@ -179,6 +179,10 @@ local function run(full)
     end
     pcall(G.selectTab, cur)
   end
+  -- 15.11: testy dopisane przez GrimuarUI (Hub\Autotest.lua): okna u NPC, ustawienia, hub
+  for _, t in ipairs(G.testChecks or {}) do
+    if full or not t.fullOnly then check(t.name, function() return t.fn(full) end) end
+  end
   local nErr, firstErr = grimuarErrors()
   check("BugSack", function() return nErr == 0 and "bez błędów Grimuara" or error(nErr .. " błędów, pierwszy: " .. (firstErr or "?")) end)
   GrimuarSetupDB.selfTest = { at = date("%Y-%m-%d %H:%M"), version = version(), full = full and true or false, ok = ok, fail = fail }
@@ -199,3 +203,4 @@ ev:SetScript("OnEvent", function()
 end)
 
 G.selfTest = run
+G.testChecks = G.testChecks or {}

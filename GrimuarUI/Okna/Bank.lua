@@ -154,6 +154,15 @@ ev:SetScript("OnEvent", function(_, e)
   if e == "BANKFRAME_OPENED" then
     C_Timer.After(0.1, function()
       build()
+      pcall(function()
+        local ids, slots = {}, 0
+        for _, b in ipairs(bankBags()) do
+          ids[#ids + 1] = b
+          slots = slots + (U.num(U.call(C_Container.GetContainerNumSlots, b)) or 0)
+        end
+        U.diag("bank", { bags = table.concat(ids, ","), slots = slots,
+          tabs = (Enum and Enum.BagIndex and Enum.BagIndex.CharacterBankTab_1) and "zakładki postaci" or "stary bank" })
+      end)
       if F:Open() then U.bankDraw() end
     end)
   elseif e == "BANKFRAME_CLOSED" then

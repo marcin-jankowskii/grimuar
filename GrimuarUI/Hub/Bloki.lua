@@ -375,7 +375,7 @@ function U.Blocks(parent)
       b.id, b.nm = it.id, it.name
       b.icon:SetTexture(it.icon or (it.id and U.call(C_Item and C_Item.GetItemIconByID, it.id)) or 134400)
       b:SetQuality(it.quality)
-      b.count:SetText("")
+      b.count:SetText(it.count and tostring(it.count) or "")
       b.up:SetShown(it.id ~= nil and pawnUp(it.id))
     end
     self.y = self.y + math.ceil(#items / per) * (size + 6) + 4

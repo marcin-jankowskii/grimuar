@@ -9,6 +9,14 @@
 local ADDON, U = ...
 
 U.NOWOSCI_GRIMUAR = {
+  { ver = "0.17 / 5.8", date = "15.11.2026", title = { pl = "Poradnik przy profesji, łup jako karty, PvP", en = "Guide by the profession window, loot cards, PvP" }, items = {
+    { pl = "Przy oknie profesji panel poradnika Polestara: pasek do progu, „Zrób N”, składniki z bankiem, ceną z aukcji i sprzedawcą.", en = "Polestar guide panel by the profession window: skill bar, Make N, reagents with bank, auction price and vendor." },
+    { pl = "Łup jako karty z powodem (◆ do poradnika, ulepszenie wg Pawna); rzuty w grupie z podpowiedzią i przyciskami, nic nie rzuca samo.", en = "Loot as cards with a reason; group rolls with advice and buttons, nothing rolls by itself." },
+    { pl = "Rynek: kategoria „◆ Do poradnika” i zakładka Sprzedaj (wystawienie nadwyżek materiałów dwoma kliknięciami).", en = "Market: For guides category and a Sell tab (post surplus materials in two clicks)." },
+    { pl = "Zakładka PvP: zabójstwa, honor, kolejka, pola bitew, ostatnie mecze, rada na każdą klasę z bilansem ze Spy.", en = "PvP tab: kills, honor, queue, battlegrounds, recent matches, advice per class with your Spy score." },
+    { pl = "Karta „Ile masz czasu?” na start sesji: plan jako karty i to, co da najwięcej w tym czasie.", en = "How much time do you have? card at session start: the plan as cards and the best value for that time." },
+    { pl = "/gr test sprawdza też nowe okna; angielskie napisy nowych okien.", en = "/gr test also checks the new windows; English strings for the new windows." },
+  } },
   { ver = "0.16 / 5.7", date = "15.11.2026", title = { pl = "Okna gry w stylu Grimuara", en = "Game windows in Grimuar style" }, items = {
     { pl = "Kupiec: towar „dla buildu” z powodem i „masz N”, odkup, naprawa; śmieci sprzedają się same po otwarciu kupca.", en = "Merchant: goods for your build with reasons, buyback, repair; junk sells itself when the merchant opens." },
     { pl = "Trener: „Kup wg buildu” z sumą, pominięte czary z powodem, „Później” wg poziomu.", en = "Trainer: buy by build with total, skipped spells with reasons, later by level." },

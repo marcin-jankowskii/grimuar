@@ -8,6 +8,25 @@ local ADDON, U = ...
 local C = U.C
 
 local function db() return U.db() end
+
+-- 15.11 autotest (/gr test, GrimuarUI\Hub\Autotest.lua): surowe dane z pierwszej wizyty u NPC, zeby sprawdzic,
+-- czy klient Forever zwraca to, czego okna sie spodziewaja (kolejnosc wartosci, zakladki banku). Czyta je Claude.
+function U.raw(fn, ...)
+  if type(fn) ~= "function" then return "brak funkcji" end
+  local r = (function(...) return { n = select("#", ...), ... } end)(pcall(fn, ...))
+  if not r[1] then return "błąd: " .. tostring(r[2]) end
+  local parts = {}
+  for i = 2, r.n do parts[#parts + 1] = tostring(r[i]) end
+  return table.concat(parts, " | ")
+end
+function U.diag(key, t)
+  local d = db()
+  d.diag = d.diag or {}
+  t = t or {}
+  t.at = date("%Y-%m-%d %H:%M")
+  t.version = U.version and U.version() or nil
+  d.diag[key] = t
+end
 function U.oknoOn(key)
   local d = db()
   return not (d.oknaOff and d.oknaOff[key])
@@ -81,6 +100,10 @@ function U.Okno(def)
     self:Hide()
     self:HostsAlpha(1)
     if not self.errSaid then self.errSaid = true U.say((def.title or "okno") .. " Grimuara: " .. tostring(err) .. " (zostaje okno gry).") end
+    local d = db()
+    d.oknaFails = d.oknaFails or {}
+    d.oknaFails[def.key or def.name or "?"] = { at = date("%Y-%m-%d %H:%M"), err = tostring(err):sub(1, 300), version = U.version and U.version() or nil }
+    if U.logError then pcall(U.logError, "okno " .. tostring(def.key), err) end
   end
   return F
 end
@@ -150,12 +173,12 @@ function U.OknoRow(parent, h)
   return r
 end
 
--- /hub okna <nazwa>: wlacza i wylacza okno Grimuara (kupiec, trener, poczta, bank)
+-- /hub okna <nazwa>: wlacza i wylacza okno Grimuara (kupiec, trener, poczta, bank, profesja, lup, rzuty)
 function U.oknaCmd(key)
   local d = db()
   d.oknaOff = d.oknaOff or {}
   if not key or key == "" then
-    U.say("okna Grimuara: /hub okna kupiec|trener|poczta|bank przełącza okno Grimuara albo okno gry.")
+    U.say("okna Grimuara: /hub okna kupiec|trener|poczta|bank|profesja|lup|rzuty przełącza okno Grimuara albo okno gry.")
     return
   end
   d.oknaOff[key] = not d.oknaOff[key] or nil

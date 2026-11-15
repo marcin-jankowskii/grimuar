@@ -24,6 +24,26 @@ local function mapName(map)
 end
 local function myFaction() return (UnitFactionGroup("player") == "Horde") and "H" or "A" end
 
+-- 15.11: tytuly i notatki krokow maja znaczniki {item:1251}, {spell:3277}, {skill:129}: nazwa z g.names poradnika,
+-- inaczej z gry (profesje po polsku)
+local SKILL_PL = { [129] = "Pierwsza pomoc", [182] = "Zielarstwo", [186] = "Górnictwo", [393] = "Skórowanie",
+  [171] = "Alchemia", [164] = "Kowalstwo", [185] = "Gotowanie", [333] = "Zaklinanie", [202] = "Inżynieria",
+  [356] = "Wędkarstwo", [165] = "Kaletnictwo", [197] = "Krawiectwo", [755] = "Jubilerstwo" }
+local function psText(g, s)
+  if type(s) ~= "string" or not s:find("{", 1, true) then return s end
+  return (s:gsub("{(%l+):(%d+)}", function(kind, id)
+    local n = tonumber(id)
+    if kind == "skill" and SKILL_PL[n] then return SKILL_PL[n] end
+    local nm = g and type(g.names) == "table" and g.names[kind .. ":" .. id]
+    if nm then return nm end
+    if kind == "item" then nm = U.call(C_Item and C_Item.GetItemNameByID, n)
+    elseif kind == "spell" then nm = U.call(C_Spell and C_Spell.GetSpellName, n) end
+    return nm or (kind .. " " .. id)
+  end))
+end
+U.psText = psText
+U.SKILL_PL = SKILL_PL
+
 function U.psProfGuide(prof)
   local P = PS()
   local id = prof and IDS[prof] and ("forever/professions/" .. IDS[prof])
@@ -50,8 +70,8 @@ local function candidate(goal)
 end
 
 -- krok poradnika -> karta (Hub\Bloki.lua)
-local function stepCard(st, rank, sec)
-  local card = { title = st.title or "?" }
+local function stepCard(st, rank, sec, guide)
+  local card = { title = psText(guide, st.title) or "?" }
   local subs = {}
   for _, g in ipairs(type(st.goals) == "table" and st.goals or {}) do
     local t = g.t
@@ -97,14 +117,19 @@ local function stepCard(st, rank, sec)
     end
   end
   if #subs > 0 then card.sub = table.concat(subs, " · ") end
-  if st.note and not card.sub then card.sub = st.note end
-  card.tip = st.note
+  local note = psText(guide, st.note)
+  if note and not card.sub then card.sub = note end
+  card.tip = note
   if card.go then
     local go = card.go
     card.onClick = function() if G.wayTo then G.wayTo(go[1], go[2], go[3], go[4]) end end
   end
   return card
 end
+
+U.psSectionFor = sectionFor
+U.psStepCard = stepCard
+U.psCandidate = candidate
 
 function U.psOpenGuide(id)
   local P = PS()
@@ -133,7 +158,7 @@ function U.psProfDraw(p, prof)
   p:Head(rank == 0 and "Na start" or ("Teraz: " .. from .. "–" .. to), "Polestar · " .. (g.title or prof) .. " · umiejętność " .. rank)
   local cards = {}
   for _, st in ipairs(g.steps) do
-    if st.section == si then cards[#cards + 1] = stepCard(st, rank, sec) end
+    if st.section == si then cards[#cards + 1] = stepCard(st, rank, sec, g) end
   end
   if #cards == 0 then p:Para("Ten przedział nie ma kroków w poradniku.", C.muted, 12) end
   p:Cards(cards, { minW = 380 })
@@ -142,7 +167,7 @@ function U.psProfDraw(p, prof)
   for i, sc in ipairs(type(g.sections) == "table" and g.sections or {}) do
     if i > si and #nxt < 4 then
       local what
-      for _, st in ipairs(g.steps) do if st.section == i and not what then what = st.title end end
+      for _, st in ipairs(g.steps) do if st.section == i and not what then what = psText(g, st.title) end end
       nxt[#nxt + 1] = { title = (sc.from or "?") .. "–" .. (sc.to or "?"), sub = what, right = sc.skill }
     end
   end
@@ -187,9 +212,48 @@ local function neededItems()
   return out
 end
 
+-- 15.11 (propozycja 4, Rynek „Do poradnika”): ile sztuk czego potrzeba do konca biezacego przedzialu kazdej profesji:
+-- skladniki krokow tworzenia (razy liczba tworzen do untilSkill; zolte ok. 1 punkt na 1,4) i przedmioty krokow zbierania
+-- -> { { id, need, why } } (wiecej z dwoch zrodel, nie suma: zbieranie to zwykle te same skladniki)
+local function neededCounts()
+  local by, out = {}, {}
+  local profs = U.call(G.readProfs) or {}
+  local function put(id, n, why)
+    if not id or n <= 0 then return end
+    local e = by[id]
+    if not e then e = { id = id, need = 0, why = why } by[id] = e out[#out + 1] = e end
+    if n > e.need then e.need, e.why = n, why end
+  end
+  for prof in pairs(IDS) do
+    local s = profs[prof]
+    local g = s and U.psProfGuide(prof)
+    if g then
+      local rank = U.num(s.rank) or 0
+      local si = sectionFor(g, rank)
+      for _, st in ipairs(g.steps) do
+        if st.section == si then
+          for _, goal in ipairs(type(st.goals) == "table" and st.goals or {}) do
+            if goal.t == "craft" and U.num(goal.untilSkill) and rank < goal.untilSkill then
+              local left = goal.untilSkill - rank
+              if U.num(goal.yellow) and rank >= goal.yellow then left = math.ceil(left * 1.4) end
+              for _, r in ipairs(type(goal.reagents) == "table" and goal.reagents or {}) do
+                put(r.item, (U.num(r.count) or 1) * left, prof .. ": " .. (psText(g, st.title) or "?"))
+              end
+            elseif goal.t == "collect" then
+              put(goal.item, U.num(goal.count) or 1, prof .. ": " .. (psText(g, st.title) or "?"))
+            end
+          end
+        end
+      end
+    end
+  end
+  return out
+end
+
 -- krotka wskazowka do okienka Profesje (GrimuarSetup): pierwszy niezrobiony krok przedzialu
 if G then
   G.psNeededItems = neededItems
+  G.psNeededCounts = neededCounts
   G.psProfHint = function(prof, rank)
     local g = U.psProfGuide(prof)
     if not g then return nil end
@@ -197,7 +261,7 @@ if G then
     local si, sec = sectionFor(g, rank)
     for _, st in ipairs(g.steps) do
       if st.section == si then
-        local c = stepCard(st, rank, sec)
+        local c = stepCard(st, rank, sec, g)
         if not c.done then return "Polestar: " .. (c.title or "?") .. (c.right and (" (" .. c.right .. ")") or "") end
       end
     end

@@ -497,6 +497,8 @@ SlashCmdList.GRIMUARHUB = function(msg)
     if U.wizard then U.wizard() end
   elseif msg == "dziel" then
     if U.shareAllQuests then U.shareAllQuests() end
+  elseif msg == "start" then
+    if U.startSesji then U.startSesji(true) end
   elseif msg:find("^okna") then
     if U.oknaCmd then U.oknaCmd(msg:match("^okna%s*(%S*)")) end
   elseif msg == "ustawienia" or msg == "klawisze" or msg == "makra" then

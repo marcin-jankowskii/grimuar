@@ -3,6 +3,9 @@
 -- w srodku, wybrany przedmiot z ofertami, historia ceny i kupnem po prawej. Etap 1: zakladka Kupuj.
 -- Dane: C_AuctionHouse (jak Auctionator: SendBrowseQuery, SendSearchQuery, StartCommoditiesPurchase + Confirm, PlaceBid);
 -- srednia z 7 dni i wykres z historii cen Auctionatora (Auctionator.Database:GetPriceHistory).
+-- 15.11 (propozycja 4): kategoria „◆ Do poradnika” (czego brakuje do konca przedzialu poradnikow profesji Polestara,
+-- G.psNeededCounts; ilosc do kupienia od razu ustawiona) i zakladka „Sprzedaj” (materialy z toreb bez potrzebnych
+-- do poradnika i bez ulubionych; wystawienie towaru po najtanszej ofercie minus 1 miedziak, 24 h, dwa klikniecia).
 -- Kupno zawsze Twoimi kliknieciami: pierwsze pokazuje dokladna cene, drugie kupuje. Okno gry zostaje pod spodem
 -- (przycisk „Zwykly dom aukcyjny”), Auctionator dziala dalej. /rynek wlacza i wylacza otwieranie Rynku.
 local ADDON_NAME, G = ...
@@ -38,6 +41,7 @@ end
 local E = Enum.ItemClass
 local WAND = (Enum.ItemWeaponSubclass and Enum.ItemWeaponSubclass.Wand) or 19
 local CATS = {
+  { "◆ Do poradnika", {}, false, special = true },
   { "Torby", { { classID = E.Container } } },
   { "Broń", { { classID = E.Weapon } } },
   { "Różdżki", { { classID = E.Weapon, subClassID = WAND } }, true },
@@ -54,7 +58,7 @@ local CATS = {
 
 -- ---------- stan ----------
 local frame
-local S = { cat = 1, text = "", results = {}, sel = nil, offset = 0, offers = {}, qty = 1, confirm = nil, waiting = false }
+local S = { cat = 2, text = "", results = {}, sel = nil, offset = 0, offers = {}, qty = 1, confirm = nil, waiting = false, mode = "buy" }
 
 local function money(c)
   c = math.floor(tonumber(c) or 0)
@@ -109,6 +113,45 @@ local function avgOf(h)
   return math.floor(s / #h)
 end
 
+-- ---------- listy bez zapytania: do poradnika i na sprzedaz ----------
+local function itemRow(id, extra)
+  local name, _, quality, _, _, _, _, _, _, icon = C_Item.GetItemInfo(id)
+  local key = (C_AuctionHouse.MakeItemKey and C_AuctionHouse.MakeItemKey(id)) or { itemID = id, itemLevel = 0, itemSuffix = 0 }
+  local h = history(key)
+  local r = { key = key, itemID = id, name = name or C_Item.GetItemNameByID(id), quality = quality, icon = icon or C_Item.GetItemIconByID(id),
+    commodity = true, avg = avgOf(h), hist = h, price = h[1] }
+  for k, v in pairs(extra or {}) do r[k] = v end
+  return r
+end
+local function guideList()
+  local out = {}
+  local ok, list = pcall(function() return G.psNeededCounts and G.psNeededCounts() or {} end)
+  for _, n in ipairs(ok and list or {}) do
+    local miss = n.need - (C_Item.GetItemCount(n.id, true) or 0)
+    if miss > 0 then out[#out + 1] = itemRow(n.id, { qty = miss, miss = miss, why = n.why }) end
+  end
+  table.sort(out, function(a, b) return (a.name or "") < (b.name or "") end)
+  return out
+end
+local function sellList()
+  local by, out = {}, {}
+  for bag = 0, NUM_BAG_SLOTS or 4 do
+    for slot = 1, C_Container.GetContainerNumSlots(bag) or 0 do
+      local it = C_Container.GetContainerItemInfo(bag, slot)
+      if it and it.itemID and not it.isBound then
+        local _, _, _, _, _, classID = C_Item.GetItemInfoInstant(it.itemID)
+        if classID == E.Tradegoods and not (G.itemNeed and G.itemNeed(it.itemID)) and not (G.itemMark and G.itemMark(it.itemID) == "fav") then
+          local r = by[it.itemID]
+          if not r then r = itemRow(it.itemID, { qty = 0, bag = bag, slot = slot }) by[it.itemID] = r out[#out + 1] = r end
+          r.qty = r.qty + (it.stackCount or 1)
+        end
+      end
+    end
+  end
+  table.sort(out, function(a, b) return (a.price or 0) * a.qty > (b.price or 0) * b.qty end)
+  return out
+end
+
 -- ---------- zapytania (z kolejka przy zdlawieniu) ----------
 local queued
 local function send(fn)
@@ -124,6 +167,13 @@ local SORT = { { sortOrder = (Enum.AuctionHouseSortOrder and Enum.AuctionHouseSo
 local refresh, showReopen -- forward
 local function browse()
   S.results, S.sel, S.offset, S.offers, S.confirm = {}, nil, 0, {}, nil
+  if S.mode == "sell" or CATS[S.cat].special then
+    S.waiting = false
+    local ok, list = pcall(S.mode == "sell" and sellList or guideList)
+    S.results = ok and list or {}
+    refresh()
+    return
+  end
   S.waiting = true
   send(function()
     C_AuctionHouse.SendBrowseQuery({ searchString = S.text or "", sorts = SORT, filters = {}, itemClassFilters = CATS[S.cat][2] })
@@ -160,7 +210,9 @@ local function readCommodity(itemID)
     local o = C_AuctionHouse.GetCommoditySearchResultInfo(itemID, i)
     if o then out[#out + 1] = { unit = o.unitPrice, qty = o.quantity, own = o.containsOwnerItem } end
   end
-  S.offers, S.max = out, C_AuctionHouse.GetCommoditySearchResultsQuantity and C_AuctionHouse.GetCommoditySearchResultsQuantity(itemID) or 1
+  S.offers = out
+  r.commodity = true
+  if S.mode ~= "sell" then S.max = C_AuctionHouse.GetCommoditySearchResultsQuantity and C_AuctionHouse.GetCommoditySearchResultsQuantity(itemID) or 1 end
 end
 
 local function readItems(itemKey)
@@ -173,6 +225,7 @@ local function readItems(itemKey)
   end
   table.sort(out, function(a, b) return a.unit < b.unit end)
   S.offers = out
+  r.commodity = false
 end
 
 -- koszt kupna qty sztuk towaru z najtanszych ofert
@@ -216,6 +269,32 @@ local function buyClick()
     else
       S.confirm = { ready = true, total = o.unit }
     end
+  end
+  refresh()
+end
+
+-- ---------- wystawianie (zakladka Sprzedaj): pierwsze klikniecie pokazuje wadium, drugie wystawia ----------
+local function postPrice(it)
+  local o = S.offers[1]
+  if o then return o.own and o.unit or math.max(1, o.unit - 1) end
+  return it and it.price
+end
+local function postClick()
+  local it = S.sel and S.results[S.sel]
+  if not (it and it.bag) then return end
+  if it.commodity == false then say("Rynek: ten przedmiot wystaw w Auctionatorze (nie jest towarem).") return end
+  local unit = postPrice(it)
+  if not unit then return end
+  if S.confirm and S.confirm.post then
+    local loc = ItemLocation:CreateFromBagAndSlot(it.bag, it.slot)
+    local ok, needs = pcall(C_AuctionHouse.PostCommodity, loc, 2, S.qty, S.confirm.unit)
+    if ok and needs and C_AuctionHouse.ConfirmPostCommodity then pcall(C_AuctionHouse.ConfirmPostCommodity, loc, 2, S.qty, S.confirm.unit) end
+    if not ok then say("Rynek: gra nie przyjęła wystawienia.") end
+    S.confirm = nil
+  else
+    local dep
+    pcall(function() dep = C_AuctionHouse.CalculateCommodityDeposit(it.itemID, 2, S.qty) end)
+    S.confirm = { post = true, unit = unit, dep = dep }
   end
   refresh()
 end
@@ -264,13 +343,12 @@ local function build()
     local t = text(b, 12, on and P.accent or P.muted, "CENTER")
     t:SetAllPoints()
     t:SetText(label)
+    b.t = t
     if fn then b:SetScript("OnClick", fn) end
     return b
   end
-  tabBtn("Kupuj", 80, true)
-  local sellTab = tabBtn("Sprzedaj", 174, false)
-  sellTab:SetScript("OnEnter", function(self) GameTooltip:SetOwner(self, "ANCHOR_BOTTOM") GameTooltip:SetText("Sprzedaż: następny etap. Na razie: Zwykły dom aukcyjny > Auctionator > Selling.") GameTooltip:Show() end)
-  sellTab:SetScript("OnLeave", function() GameTooltip:Hide() end)
+  D.tabBuy = tabBtn("Kupuj", 80, true, function() S.mode = "buy" browse() end)
+  D.tabSell = tabBtn("Sprzedaj", 174, false, function() S.mode = "sell" browse() end)
   tabBtn("Zwykły dom aukcyjny", 268, false, function() frame:Hide() end):SetWidth(150)
   D.wallet = text(bar, 12, P.muted, "RIGHT")
   D.wallet:SetPoint("RIGHT", -36, 0)
@@ -305,7 +383,7 @@ local function build()
     b.t = text(b, 12, c[3] and P.muted or P.text)
     b.t:SetPoint("LEFT", c[3] and 22 or 8, 0)
     b.t:SetText(c[1])
-    b:SetScript("OnClick", function() S.cat = i browse() end)
+    b:SetScript("OnClick", function() S.cat = i S.mode = "buy" browse() end)
     catButtons[i] = b
   end
 
@@ -339,7 +417,11 @@ local function build()
     r:SetScript("OnClick", function(self)
       if not self.index then return end
       S.sel = self.index
-      search(S.results[S.sel])
+      local it = S.results[S.sel]
+      search(it)
+      -- do poradnika: od razu brakujaca ilosc; sprzedaz: wszystko z toreb
+      if it.miss then S.qty = it.miss end
+      if S.mode == "sell" then S.qty, S.max = it.qty, it.qty end
       refresh()
     end)
     r:SetScript("OnEnter", function(self)
@@ -415,7 +497,7 @@ local function build()
   buy:SetPoint("TOPLEFT", 116, -332) buy:SetPoint("TOPRIGHT", -12, -332) buy:SetHeight(28)
   buy.bg = tex(buy, "BACKGROUND", P.accent, -6) buy.bg:SetAllPoints() edge(buy, P.edge)
   buy.t = text(buy, 13, { 0.1, 0.08, 0.03 }, "CENTER") buy.t:SetAllPoints()
-  buy:SetScript("OnClick", buyClick)
+  buy:SetScript("OnClick", function() if S.mode == "sell" then postClick() else buyClick() end end)
   D.buy = buy
   D.note = text(right, 11, P.muted) D.note:SetPoint("TOPLEFT", 12, -368) D.note:SetWidth(RIGHT_W - 24)
   frame:Hide()
@@ -425,8 +507,12 @@ end
 refresh = function()
   if not frame then return end
   D.wallet:SetText("masz " .. money(GetMoney()) .. "   torby wolne: " .. (G.freeBagSlots and G.freeBagSlots() or "?"))
+  for _, tb in ipairs({ { D.tabBuy, S.mode ~= "sell" }, { D.tabSell, S.mode == "sell" } }) do
+    local c = tb[2] and P.accent or P.muted
+    if tb[1] and tb[1].t then tb[1].t:SetTextColor(c[1], c[2], c[3]) end
+  end
   for i, b in ipairs(catButtons) do
-    local on = i == S.cat
+    local on = i == S.cat and S.mode ~= "sell"
     b.bg:SetColorTexture(P.accent[1], P.accent[2], P.accent[3], on and 0.14 or 0)
     b.t:SetTextColor((on and P.accent or (CATS[i][3] and P.muted or P.text))[1], (on and P.accent or (CATS[i][3] and P.muted or P.text))[2], (on and P.accent or (CATS[i][3] and P.muted or P.text))[3])
   end
@@ -438,7 +524,7 @@ refresh = function()
       r.icon:SetTexture(it.icon) r.icon:Show()
       local q = qualityColor(it.quality)
       r.name:SetText(it.name or ("#" .. it.itemID)) r.name:SetTextColor(q[1], q[2], q[3])
-      r.price:SetText(money(it.price))
+      r.price:SetText(it.price and money(it.price) or "–")
       r.qty:SetText(it.qty or "")
       r.avg:SetText(it.avg and money(it.avg) or "-")
       if it.avg and it.avg > 0 and it.price and #(it.hist or {}) >= 2 then -- z 1 dnia srednia = dzisiejsza cena
@@ -454,7 +540,16 @@ refresh = function()
       r:Hide()
     end
   end
-  D.status:SetText(S.waiting and "szukam..." or (#S.results .. " przedmiotów"))
+  if S.mode == "sell" then
+    D.status:SetText(#S.results .. " materiałów na sprzedaż (bez ◆ potrzebnych i ulubionych)")
+    D.source:SetText("cena: ostatni skan Auctionatora · liczba: w torbach")
+  elseif CATS[S.cat].special then
+    D.status:SetText(#S.results == 0 and "masz wszystko do poradników profesji" or (#S.results .. " brakuje do poradników profesji"))
+    D.source:SetText("cena: ostatni skan Auctionatora · liczba: ile brakuje")
+  else
+    D.status:SetText(S.waiting and "szukam..." or (#S.results .. " przedmiotów"))
+    D.source:SetText("średnia i trend z historii Auctionatora")
+  end
   -- szczegoly
   local it = S.sel and S.results[S.sel]
   D.icon:SetShown(it ~= nil)
@@ -491,6 +586,24 @@ refresh = function()
     if v then b:SetHeight(math.max(2, 60 * v / maxv)) b:Show() else b:Hide() end
   end
   D.avgLine:SetText(#h > 0 and ("średnio " .. money(it.avg or 0) .. "  (" .. #h .. (#h == 1 and " dzień, trend od 2 dni)" or " dni)")) or "brak historii: zrób skan w Auctionatorze")
+  if S.mode == "sell" then
+    D.qtyFrame:Show()
+    D.qty:SetText(S.qty)
+    D.buy:Show()
+    local unit = postPrice(it)
+    if S.confirm and S.confirm.post then
+      D.buy.t:SetText("Potwierdź: " .. S.qty .. " × " .. money(S.confirm.unit)) D.buy:Enable()
+    elseif unit then
+      D.buy.t:SetText("Wystaw " .. S.qty .. " × " .. money(unit)) D.buy:Enable()
+    else
+      D.buy.t:SetText("brak ceny: zrób skan w Auctionatorze") D.buy:Disable()
+    end
+    D.buy.bg:SetAlpha(D.buy:IsEnabled() and 1 or 0.35)
+    D.note:SetText((S.confirm and S.confirm.post) and ("Wadium " .. money(S.confirm.dep or 0) .. ", aukcja na 24 h. Drugie kliknięcie wystawia.")
+      or "Cena: najtańsza oferta minus 1 miedziak (Twoja najtańsza: ta sama). Pierwsze kliknięcie pokazuje wadium.")
+    return
+  end
+  if it.why then D.sub:SetText("◆ " .. it.why) end
   -- kupno
   D.qtyFrame:SetShown(it.commodity == true)
   D.qty:SetText(S.qty)
@@ -517,7 +630,8 @@ local ev = CreateFrame("Frame")
 for _, e in ipairs({ "AUCTION_HOUSE_SHOW", "AUCTION_HOUSE_CLOSED", "AUCTION_HOUSE_BROWSE_RESULTS_UPDATED",
   "AUCTION_HOUSE_BROWSE_RESULTS_ADDED", "ITEM_KEY_ITEM_INFO_RECEIVED", "COMMODITY_SEARCH_RESULTS_UPDATED",
   "ITEM_SEARCH_RESULTS_UPDATED", "COMMODITY_PRICE_UPDATED", "COMMODITY_PRICE_UNAVAILABLE", "COMMODITY_PURCHASE_SUCCEEDED",
-  "COMMODITY_PURCHASE_FAILED", "AUCTION_HOUSE_THROTTLED_SYSTEM_READY", "PLAYER_MONEY", "BAG_UPDATE_DELAYED" }) do
+  "COMMODITY_PURCHASE_FAILED", "AUCTION_HOUSE_THROTTLED_SYSTEM_READY", "PLAYER_MONEY", "BAG_UPDATE_DELAYED",
+  "AUCTION_HOUSE_AUCTION_CREATED" }) do
   pcall(ev.RegisterEvent, ev, e)
 end
 -- maly przycisk „Rynek” nad zwyklym domem aukcyjnym (powrot po „Zwykly dom aukcyjny”); dziecko UIParent, wiec
@@ -555,6 +669,9 @@ local function openMarket()
   -- (sama przezroczystosc: okno dalej dziala, Auctionator tez; po zamknieciu Rynku wraca alfa 1)
   if _G.AuctionHouseFrame then pcall(AuctionHouseFrame.SetAlpha, AuctionHouseFrame, 0) end
   showReopen(false)
+  S.mode = "buy"
+  local okG, need = pcall(guideList)
+  S.cat = (okG and #need > 0) and 1 or 2
   browse()
 end
 
@@ -572,6 +689,20 @@ ev:SetScript("OnEvent", function(_, e, a1, a2)
     showReopen(false)
   elseif e == "AUCTION_HOUSE_THROTTLED_SYSTEM_READY" then
     if queued then local fn = queued queued = nil pcall(fn) end
+  elseif (e == "AUCTION_HOUSE_BROWSE_RESULTS_UPDATED" or e == "AUCTION_HOUSE_BROWSE_RESULTS_ADDED" or e == "ITEM_KEY_ITEM_INFO_RECEIVED")
+    and (S.mode == "sell" or CATS[S.cat].special) then
+    -- nasze listy nie czekaja na przegladanie (wyniki zapytan okna gry pomijamy)
+  elseif e == "AUCTION_HOUSE_AUCTION_CREATED" then
+    say("Rynek: wystawione.")
+    if S.mode == "sell" then browse() end
+  elseif e == "BAG_UPDATE_DELAYED" and S.mode == "sell" and not S.confirm then
+    local keepID = S.sel and S.results[S.sel] and S.results[S.sel].itemID
+    local ok, list = pcall(sellList)
+    if ok then
+      S.results = list
+      S.sel = nil
+      for i, r in ipairs(list) do if r.itemID == keepID then S.sel = i S.qty, S.max = math.min(S.qty, r.qty), r.qty end end
+    end
   elseif e == "AUCTION_HOUSE_BROWSE_RESULTS_UPDATED" or e == "AUCTION_HOUSE_BROWSE_RESULTS_ADDED" or e == "ITEM_KEY_ITEM_INFO_RECEIVED" then
     local keep = S.sel and S.results[S.sel] and S.results[S.sel].itemID
     pcall(readBrowse)
