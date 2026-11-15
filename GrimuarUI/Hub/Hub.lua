@@ -68,6 +68,10 @@ local function layoutTabs()
   eKey:ClearAllPoints()
   eKey:SetPoint("LEFT", tabHolder, "LEFT", x + 12, 6)
   tabHolder:SetWidth(x + 12 + eKey:GetWidth())
+  -- 15.11: 15 zakladek (Ekwipunek, Ustawienia): gdy pasek nie miesci sie miedzy nazwa a postacia, lekko sie zmniejsza
+  local avail = (UIParent:GetWidth() or 1600) - 560
+  local need = x + 12 + eKey:GetWidth()
+  tabHolder:SetScale(need > avail and math.max(0.72, avail / need) or 1)
 end
 
 -- ---------- podpowiedzi klawiszy na dole ----------
@@ -493,6 +497,10 @@ SlashCmdList.GRIMUARHUB = function(msg)
     if U.wizard then U.wizard() end
   elseif msg == "dziel" then
     if U.shareAllQuests then U.shareAllQuests() end
+  elseif msg:find("^okna") then
+    if U.oknaCmd then U.oknaCmd(msg:match("^okna%s*(%S*)")) end
+  elseif msg == "ustawienia" or msg == "klawisze" or msg == "makra" then
+    if U.ustawieniaOpen then U.ustawieniaOpen(msg ~= "ustawienia" and msg or nil) end
   elseif msg:find("^grupa") then
     if U.groupCmd then U.groupCmd(msg:match("^grupa%s+(%S+)")) end
   elseif msg:find("^kompas") then

@@ -4,7 +4,7 @@
 ## Notes-enUS: Grimuar: settings, builds, step-by-step guidance, guide window, tutorial. Shift+G, /gr
 ## Author: Grimuar
 ## X-License: GPL-3.0
-## Version: 5.6.0
+## Version: 5.7.0
 ## SavedVariables: GrimuarSetupDB
 ## OptionalDeps: Grimuar_Osobiste, Masque, Polestar
 Build\Api.lua

@@ -24,7 +24,7 @@ end
 
 local function reason(name)
   if AOE[name] then return "tylko pod AoE (/grimuar aoe)" end
-  return WHY_SKIP[name] or "nie ma go w planie Frosta"
+  return WHY_SKIP[name] or "nie ma go w planie buildu"
 end
 
 local function services()
@@ -88,7 +88,7 @@ local function step()
   end
   running = false
   local buy = plan()
-  local msg = nBought > 0 and ("kupione dla Frosta: " .. nBought .. " za " .. coins(spent) .. ".") or "nie było nic do kupienia."
+  local msg = nBought > 0 and ("kupione wg buildu: " .. nBought .. " za " .. coins(spent) .. ".") or "nie było nic do kupienia."
   if #buy > 0 then msg = msg .. " Zabrakło pieniędzy na: " .. #buy .. "." end
   say(msg)
 end
@@ -155,4 +155,8 @@ ev:SetScript("OnEvent", function(_, event)
 end)
 
 G.trainPlan = plan
-G.trainWanted = wanted -- plan Frosta dla listy brakujacych czarow (Engine.lua missingTraining)
+G.trainWanted = wanted
+-- 15.11: okno Trenera Grimuara (GrimuarUI Okna\Trener.lua): powod pominiecia, zakup wg buildu, czy to trener klasy
+G.trainReason = reason
+G.trainStart = start
+G.trainIsClass = isMageTrainer -- plan Frosta dla listy brakujacych czarow (Engine.lua missingTraining)

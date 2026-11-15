@@ -35,5 +35,12 @@ Automatycznie: `/gr test` (moduły GrimuarSetup) i `/hub test` (wszystkie zakła
 | Plecak przy kupcu: „Sprzedaj śmieci (N, wartość)”, sprzedaje max 12 na klik; przy banku „Odłóż materiały” | | | | | |
 | Pas podręczny: picie/jedzenie/bandaż/mikstura/dom klikalne, liczby, w walce działa, „starczy na ok. N walk” po 3 walkach | | | | | |
 | Hub > Ekwipunek: siatka z filtrami, karta z porównaniem i „Zamiast”, Załóż, lista z sortowaniem i kolumną Gdzie (bank, inne postacie) | | | | | |
+| 5.7/0.16 Kupiec: okno Grimuara, „Dla buildu”, klik kupuje 1, Shift+klik stos, Odkup, Napraw; śmieci sprzedane same + linia na czacie | | | | | |
+| Trener (klasy i profesji): sekcje, „Kup wg buildu” z sumą, klik w wiersz kupuje, „Później” wg poziomu | | | | | |
+| Poczta: lista, otwarcie listu, Odbierz, Odbierz wszystko, Usuń; Wyślij z pieniędzmi i załącznikiem z plecaka | | | | | |
+| Bank: oba plecaki, prawy klik przenosi w obie strony, Odłóż materiały, Sortuj | | | | | |
+| Esc > Ustawienia: hub na cały ekran; strony, przełączniki, suwaki, wybór; wyszukiwarka; znaczek Grimuar | | | | | |
+| Ustawienia > Klawisze: Zmień (klawisz, Shift+, mysz 4, kółko), Usuń; Ustawienia > Makra: edycja, nowe, usuń (2 kliki), Na pasek | | | | | |
+| „klasyczne okno” w każdym oknie; /hub okna kupiec (przełącza na okno gry) | | | | | |
 
 Wynik zapisz w CHANGELOG.md przy wersji.

@@ -142,7 +142,7 @@ local TOGGLES = {
   { "Przyciski Grimuara w menu Esc", function() return not GrimuarSetupDB.noEscMenu end, flip("noEscMenu") },
   { "Menu Esc Grimuara na cały ekran (inaczej menu Blizzarda)", function() return not GrimuarSetupDB.escClassic end, flip("escClassic") },
   -- kompas z GrimuarUI (Kompas.lua, zapis w GrimuarUIDB): przelacza przez G.kompasCmd
-  { "Kompas u góry ekranu (hub, chowa się w walce)", function() return not (GrimuarUIDB and GrimuarUIDB.kompas == false) end,
+  { "Kompas u góry ekranu (hub; /hub kompas walka chowa go w walce)", function() return not (GrimuarUIDB and GrimuarUIDB.kompas == false) end,
     function() if G.kompasCmd then G.kompasCmd() end end },
   { "Cel u góry ekranu przy wrogim celu i w walce (hub)", function() return not (GrimuarUIDB and GrimuarUIDB.hudCel == false) end,
     function() if G.hudCmd then G.hudCmd("cel") end end },
@@ -165,6 +165,7 @@ local TOGGLES = {
   { "Spokojny ekran (bez poświaty i szarości po śmierci)", function() return GrimuarSetupDB.calmScreen end, function() G.calmToggle() end },
   { "Barwy Runy w addonach (ustaw jeszcze raz)", function() return (GrimuarSetupDB.barwyV or 0) >= (G.BARWY_VER or 1) end, function() G.barwyApply() end },
 }
+G.TOGGLES = TOGGLES -- 15.11: tez strona Grimuar w Ustawieniach huba (GrimuarUI Ustawienia\TabUstawienia.lua)
 
 local function pageToggles(P)
   P.M("Kliknij, żeby włączyć albo wyłączyć. Zmiana działa od razu.")

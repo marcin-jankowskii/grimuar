@@ -9,6 +9,12 @@
 local ADDON, U = ...
 
 U.NOWOSCI_GRIMUAR = {
+  { ver = "0.16 / 5.7", date = "15.11.2026", title = { pl = "Okna gry w stylu Grimuara", en = "Game windows in Grimuar style" }, items = {
+    { pl = "Kupiec: towar „dla buildu” z powodem i „masz N”, odkup, naprawa; śmieci sprzedają się same po otwarciu kupca.", en = "Merchant: goods for your build with reasons, buyback, repair; junk sells itself when the merchant opens." },
+    { pl = "Trener: „Kup wg buildu” z sumą, pominięte czary z powodem, „Później” wg poziomu.", en = "Trainer: buy by build with total, skipped spells with reasons, later by level." },
+    { pl = "Poczta (odbierz wszystko, wysyłanie z załącznikami) i Bank (prawy klik przenosi, odłóż materiały, sortowanie).", en = "Mailbox (take all, send with attachments) and Bank (right-click moves, deposit materials, sort)." },
+    { pl = "Ustawienia na cały ekran w hubie: Sterowanie, Kamera, Walka, Interfejs, Grafika, Dźwięk, Grimuar, Klawisze i Makra, z wyszukiwarką.", en = "Full-screen Settings tab: controls, camera, combat, interface, graphics, sound, Grimuar, key bindings and macros, with search." },
+  } },
   { ver = "0.15 / 5.6", date = "15.11.2026", title = { pl = "Polestar w hubie, mniej chowania", en = "Polestar in the hub, less hiding" }, items = {
     { pl = "Rzemiosło: „Poradnik Polestara” z krokami dla Twojego poziomu profesji, składnikami z torby i prowadzeniem do trenera.", en = "Crafting: Polestar guide with steps for your profession level, reagents from your bags and guidance to the trainer." },
     { pl = "Wyprawy: obraz lochu z Polestara, „najlepiej na”, znak Forever, przycisk „W Polestarze”; Łupy jako ikony z dymkiem i oceną Pawna.", en = "Expeditions: dungeon art from Polestar, best level, Forever tag, Open in Polestar; loot as icons with tooltip and Pawn rating." },

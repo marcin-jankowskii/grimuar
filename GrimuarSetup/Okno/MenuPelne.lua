@@ -69,6 +69,16 @@ local function openKeybindings()
   if id then pcall(Settings.OpenToCategory, id) end
 end
 
+local function hubSettings(page)
+  closeMenu()
+  if G.ustawieniaOpen then C_Timer.After(0, function() G.ustawieniaOpen(page) end) return end
+  C_Timer.After(0, function()
+    if page == "klawisze" then openKeybindings()
+    elseif page == "makra" then if ShowMacroFrame then pcall(ShowMacroFrame) end
+    elseif Settings and Settings.OpenToCategory then pcall(Settings.OpenToCategory) end
+  end)
+end
+
 local SPECS = {
   { "Wróć do gry", key = "Esc", run = closeMenu },
   { "Hub", keyB = { "GRIMUAR_HUB", "`" }, run = function()
@@ -82,10 +92,12 @@ local SPECS = {
       if G.selectTab then pcall(G.selectTab, "teraz") end
     end },
   { sep = true },
-  { "Ustawienia", blizz = "options" },
+  -- 15.11 (gracz: „klikam ustawienia… przestarzale okno… w nowym naszym stylu”, „fullscreen”): Ustawienia, Klawisze
+  -- i Makra otwieraja zakladke Ustawienia huba (GrimuarUI); bez GrimuarUI zostaje okno gry
+  { "Ustawienia", run = function() hubSettings(nil) end },
   { "Interfejs i tryby HUD", blizz = "editmode" },
-  { "Klawisze", blizz = "options", after = openKeybindings },
-  { "Makra", blizz = "macros" },
+  { "Klawisze", run = function() hubSettings("klawisze") end },
+  { "Makra", run = function() hubSettings("makra") end },
   { "AddOny", blizz = "addons" },
   { "Pomoc i zgłoszenia", blizz = "support" },
   { sep = true },

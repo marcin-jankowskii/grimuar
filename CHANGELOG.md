@@ -1,5 +1,19 @@
 # Changelog
 
+## GrimuarSetup 5.7.0 · GrimuarUI 0.16.0 (2026-11-15)
+- **Game windows in the hub style** (plan R29): Merchant (goods "for your build" with reasons and "you have N",
+  buyback, repair all, bag with right-click sell; junk sells itself when the merchant opens, with one chat line),
+  Trainer (buy by build with total, skipped spells with the build's reason, later by level), Mailbox (inbox with
+  open / take / take all / delete, send with money and attachments from the bag), Bank (bank and bag side by side,
+  right-click moves, deposit materials, sort). Shared shell `Okna/Wspolne.lua`: our window covers the game's or
+  ForeverSkin's window, which keeps only alpha 0; "classic window" for one visit, `/hub okna <name>` to switch off.
+- **Settings as a full-screen hub tab** (Esc > Settings, Key Bindings and Macros open it): Polish pages Controls, Camera,
+  Combat, Interface, Graphics, Sound (CVars, out of combat), Grimuar (all Grimuar toggles), Key Bindings (two keys per
+  command, change by pressing a key incl. mouse buttons and wheel, clear), Macros (edit, new account / character macro,
+  delete, put on bar); search across all pages; "Full game settings" and Edit Mode buttons. "Grimuar" badge on options
+  Grimuar sets.
+- Hub tab bar scales down a little when 15 tabs do not fit.
+
 ## GrimuarSetup 5.6.0 · GrimuarUI 0.15.0 (2026-11-15)
 - **Polestar integration** (read-only): Crafting gets a "Polestar guide" view (profession guide steps for your skill,
   reagents with bag counts, click a trainer, vendor or spot to get the arrow, "Open in Polestar" in a new tab);

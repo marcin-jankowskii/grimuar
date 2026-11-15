@@ -104,6 +104,31 @@ local function sellJunk()
   if n > 0 then say("sprzedane śmieci: " .. n .. (n < #list and (" (zostało " .. (#list - n) .. ", kliknij jeszcze raz)") or "") .. ", ok. " .. moneyText(value) .. ".")
   else say("nie ma śmieci do sprzedania.") end
 end
+G.sellJunk = sellJunk
+-- 15.11 (wybor gracza: „same przy otwarciu kupca”): smieci Grimuara sprzedawane od razu po otwarciu kupca, partiami
+-- po 12 co 0,4 s, na koncu jedna linia na czacie (ile i za ile). Wylaczenie: GrimuarSetupDB.autoSellJunk = false.
+local function autoSell()
+  if GrimuarSetupDB.autoSellJunk == false or InCombatLockdown() then return end
+  local sold, value = 0, 0
+  local function batch(round)
+    if not K.merchant or round > 20 then return end
+    local list = G.junkList()
+    if #list == 0 then
+      if sold > 0 then say("sprzedane śmieci: " .. sold .. " za ok. " .. moneyText(value) .. " (★ ulubione i ◆ potrzebne zostają).") end
+      return
+    end
+    local n = 0
+    for _, it in ipairs(list) do
+      if n >= 12 then break end
+      pcall(C_Container.UseContainerItem, it[1], it[2])
+      n, value = n + 1, value + it[3]
+    end
+    sold = sold + n
+    C_Timer.After(0.4, function() batch(round + 1) end)
+  end
+  C_Timer.After(0.3, function() batch(1) end)
+end
+
 -- materialy do banku: tkaniny, ziola, ruda, mieso, kamienie (klasa Tradegoods), ale nie potrzebne i nie ulubione
 local function depositMaterials()
   if not K.bank then say("materiały odłożysz przy banku.") return end
@@ -119,6 +144,7 @@ local function depositMaterials()
   end)
   say(n > 0 and ("odłożone do banku: " .. n .. " stosów materiałów (potrzebne do poradnika zostają).") or "nie ma materiałów do odłożenia.")
 end
+G.depositMaterials = depositMaterials
 local function compact()
   if InCombatLockdown() then return end
   if C_Container and C_Container.SortBags then pcall(C_Container.SortBags) elseif SortBags then pcall(SortBags) end
@@ -301,7 +327,7 @@ ev:SetScript("OnEvent", function(_, e)
     end
     return
   end
-  if e == "MERCHANT_SHOW" then K.merchant = true elseif e == "MERCHANT_CLOSED" then K.merchant = false
+  if e == "MERCHANT_SHOW" then K.merchant = true pcall(autoSell) elseif e == "MERCHANT_CLOSED" then K.merchant = false
   elseif e == "BANKFRAME_OPENED" then K.bank = true elseif e == "BANKFRAME_CLOSED" then K.bank = false end
   if bar then C_Timer.After(0.2, function() pcall(G.plecakBarUpdate) end) end
 end)
