@@ -276,18 +276,18 @@ local function profRow(i)
   end)
   r:SetScript("OnEnter", function(self)
     if not self.pr or self.pr.name == "_cele" then return end
-    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    GameTooltip:SetText(pl(self.pr.name) .. " " .. self.s.rank .. " / " .. self.s.max, C.gold[1], C.gold[2], C.gold[3])
+    U.TT:SetOwner(self, "ANCHOR_RIGHT")
+    U.TT:SetText(pl(self.pr.name) .. " " .. self.s.rank .. " / " .. self.s.max, C.gold[1], C.gold[2], C.gold[3])
     local b = self.pr.key and U.call(G.profBand, self.pr.key, self.s.rank)
     if b then
-      GameTooltip:AddLine("Teraz: " .. b[4], 1, 1, 1, true)
-      GameTooltip:AddLine("Gdzie: " .. b[5] .. " (poziom postaci " .. b[3] .. ")", 0.75, 0.75, 0.75, true)
+      U.TT:AddLine("Teraz: " .. b[4], 1, 1, 1, true)
+      U.TT:AddLine("Gdzie: " .. b[5] .. " (poziom postaci " .. b[3] .. ")", 0.75, 0.75, 0.75, true)
     end
-    if self.nxt then GameTooltip:AddLine("Trener: " .. self.nxt[4], 0.62, 0.73, 0.45, true) end
-    if NOTE[self.pr.name] then GameTooltip:AddLine(NOTE[self.pr.name], 0.64, 0.61, 0.55, true) end
-    GameTooltip:Show()
+    if self.nxt then U.TT:AddLine("Trener: " .. self.nxt[4], 0.62, 0.73, 0.45, true) end
+    if NOTE[self.pr.name] then U.TT:AddLine(NOTE[self.pr.name], 0.64, 0.61, 0.55, true) end
+    U.TT:Show()
   end)
-  r:SetScript("OnLeave", function() GameTooltip:Hide() end)
+  r:SetScript("OnLeave", function() U.TT:Hide() end)
   R.profRows[i] = r
   return r
 end
@@ -475,11 +475,11 @@ local function reagRow(i)
   g.n:SetJustifyV("MIDDLE")
   g.slot:SetScript("OnEnter", function(self)
     if not self.id then return end
-    GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-    if not pcall(GameTooltip.SetItemByID, GameTooltip, self.id) then GameTooltip:SetText(self.nm or "") end
-    GameTooltip:Show()
+    U.TT:SetOwner(self, "ANCHOR_LEFT")
+    if not pcall(U.TT.SetItemByID, U.TT, self.id) then U.TT:SetText(self.nm or "") end
+    U.TT:Show()
   end)
-  g.slot:SetScript("OnLeave", function() GameTooltip:Hide() end)
+  g.slot:SetScript("OnLeave", function() U.TT:Hide() end)
   R.reag[i] = g
   return g
 end
@@ -701,10 +701,10 @@ local function build(page)
   R.icon:SetPoint("TOPLEFT", 18, -20)
   R.icon:SetScript("OnEnter", function(self)
     if not self.link then return end
-    GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-    if pcall(GameTooltip.SetHyperlink, GameTooltip, self.link) then GameTooltip:Show() end
+    U.TT:SetOwner(self, "ANCHOR_LEFT")
+    if pcall(U.TT.SetHyperlink, U.TT, self.link) then U.TT:Show() end
   end)
-  R.icon:SetScript("OnLeave", function() GameTooltip:Hide() end)
+  R.icon:SetScript("OnLeave", function() U.TT:Hide() end)
   R.icon:SetParent(R.detail)
   R.dName = U.Para(R.detail, 18, w - 66, C.gold, "title")
   R.dName:SetPoint("TOPLEFT", R.icon, "TOPRIGHT", 12, -2)

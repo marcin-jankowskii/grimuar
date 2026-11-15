@@ -53,6 +53,18 @@ local function FlatButton(parent, w, h, text, primary)
       fs:SetTextColor(unpack(COL.accent))
       return
     end
+    -- 15.11 (gracz: karta „Grimuar · Teraz” w stylu huba): b.hub = wyglad przyciskow huba (U.Button w GrimuarUI)
+    if self.hub then
+      if self.primary then
+        setBackdrop(self, { 0.85, 0.71, 0.36, hover and 1 or 0.9 }, { 0.85, 0.71, 0.36, 1 })
+        fs:SetTextColor(0.051, 0.043, 0.035)
+      else
+        local k = hover and 1.45 or 1
+        setBackdrop(self, { 0.102 * k, 0.082 * k, 0.059 * k, 1 }, hover and { 0.85, 0.71, 0.36, 1 } or { 0.43, 0.35, 0.2, 1 })
+        fs:SetTextColor(0.93, 0.91, 0.86)
+      end
+      return
+    end
     setBackdrop(self, hover and COL.btnHover or COL.btn, hover and COL.accent or (self.primary and COL.gold or COL.btnEdge))
     if self.primary then fs:SetTextColor(unpack(COL.gold)) else fs:SetTextColor(unpack(COL.text)) end
   end
@@ -142,6 +154,39 @@ end
 G.STYLE = COL
 G.TITLE_FONT = TITLE_FONT
 G.setBackdrop = setBackdrop
+-- 15.11 (gracz: „chcialbym, zeby byl przycisk do zwijania i rozwijania”): maly przycisk −/+ w rogu naglowka;
+-- zwiniety panel to sam naglowek, stan w GrimuarSetupDB
+function G.FoldButton(parent, key, onToggle)
+  local b = CreateFrame("Button", nil, parent)
+  b:SetSize(20, 20)
+  b:SetPoint("TOPRIGHT", parent, "TOPRIGHT", -6, -6)
+  b:SetFrameLevel(parent:GetFrameLevel() + 5)
+  b.t = b:CreateFontString(nil, "OVERLAY")
+  b.t:SetFont(G.TF and G.TF() or "Fonts\\ARIALN.TTF", 18, "")
+  b.t:SetPoint("CENTER", 0, 1)
+  b.t:SetTextColor(0.85, 0.71, 0.36)
+  local function paint() b.t:SetText(GrimuarSetupDB[key] and "+" or "–") end
+  b:SetScript("OnEnter", function(self)
+    self.t:SetTextColor(0.95, 0.93, 0.88)
+    local tt = G.TT or GameTooltip
+    tt:SetOwner(self, "ANCHOR_LEFT")
+    tt:SetText(GrimuarSetupDB[key] and "Rozwiń" or "Zwiń", 1, 1, 1)
+    tt:Show()
+  end)
+  b:SetScript("OnLeave", function(self)
+    self.t:SetTextColor(0.85, 0.71, 0.36)
+    local tt = G.TT or GameTooltip
+    tt:Hide()
+  end)
+  b:SetScript("OnClick", function()
+    GrimuarSetupDB[key] = not GrimuarSetupDB[key] or nil
+    paint()
+    if onToggle then pcall(onToggle) end
+  end)
+  b.Paint = paint
+  paint()
+  return b
+end
 G.FlatButton = FlatButton
 G.FitButton = FitButton
 G.StyledWindow = StyledWindow

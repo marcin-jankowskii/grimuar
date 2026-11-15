@@ -328,6 +328,13 @@ local function buildCombo()
   for _, r in ipairs(combo.rows or {}) do r:Hide() end
   local y = -10
   header(combo.title, "Combo: " .. ((G.BD_META and G.BD_META.name) or "build"):gsub("^Mag ", ""):gsub(":.*$", ""), y)
+  -- 15.11: zwiniete combo to sam naglowek
+  if combo.fold then combo.fold.Paint() end
+  if GrimuarSetupDB.runyComboFolded then
+    combo.title2:Hide()
+    combo:SetHeight(36)
+    return
+  end
   y = y - 24
   local i = 0
   for _, s in ipairs(STEPS) do
@@ -393,6 +400,7 @@ local function makeCombo()
   combo.title2 = combo:CreateFontString(nil, "OVERLAY")
   combo.title2:SetFont(RUNE_FONT, 14, "")
   combo.title2:SetTextColor(unpack(GOLD))
+  if G.FoldButton then combo.fold = G.FoldButton(combo, "runyComboFolded", function() if not InCombatLockdown() then buildCombo() end end) end
   -- Shift + przeciagnij przesuwa sciage
   combo:SetMovable(true)
   combo:EnableMouse(true)

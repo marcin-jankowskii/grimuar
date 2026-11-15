@@ -217,16 +217,16 @@ local function achRow(i)
   end)
   r:SetScript("OnEnter", function(self)
     if not self.a then return end
-    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    U.TT:SetOwner(self, "ANCHOR_RIGHT")
     local link = U.call(GetAchievementLink, self.a.id)
-    if not (link and pcall(GameTooltip.SetHyperlink, GameTooltip, link)) then
-      GameTooltip:SetText(self.a.name, C.gold[1], C.gold[2], C.gold[3])
-      if self.a.desc then GameTooltip:AddLine(self.a.desc, 1, 1, 1, true) end
+    if not (link and pcall(U.TT.SetHyperlink, U.TT, link)) then
+      U.TT:SetText(self.a.name, C.gold[1], C.gold[2], C.gold[3])
+      if self.a.desc then U.TT:AddLine(self.a.desc, 1, 1, 1, true) end
     end
-    GameTooltip:AddLine("LPM: szczegóły · Shift+LPM: śledź", C.faint[1], C.faint[2], C.faint[3])
-    GameTooltip:Show()
+    U.TT:AddLine("LPM: szczegóły · Shift+LPM: śledź", C.faint[1], C.faint[2], C.faint[3])
+    U.TT:Show()
   end)
-  r:SetScript("OnLeave", function() GameTooltip:Hide() end)
+  r:SetScript("OnLeave", function() U.TT:Hide() end)
   A.rows[i] = r
   return r
 end

@@ -116,9 +116,9 @@ local function bagSlot(i)
   end)
   s:SetScript("OnEnter", function(self)
     if not self.bagID then return end
-    GameTooltip:SetOwner(self, "ANCHOR_RIGHT") pcall(GameTooltip.SetBagItem, GameTooltip, self.bagID, self.slotID) GameTooltip:Show()
+    U.TT:SetOwner(self, "ANCHOR_RIGHT") pcall(U.TT.SetBagItem, U.TT, self.bagID, self.slotID) U.TT:Show()
   end)
-  s:SetScript("OnLeave", function() GameTooltip:Hide() end)
+  s:SetScript("OnLeave", function() U.TT:Hide() end)
   F.bag.slots[i] = s
   return s
 end

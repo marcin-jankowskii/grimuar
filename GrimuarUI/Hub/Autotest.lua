@@ -122,6 +122,12 @@ add("hub", function(full)
   return t.ok .. " z " .. t.total .. " zakładek działa (" .. t.at .. ")"
 end)
 
+-- 15.11: dymki Grimuara przez wlasny dymek z polskimi literami (GrimuarSetup Rdzen\Dymek.lua)
+add("dymki", function()
+  if not (G.TT and U.TT == G.TT) then error("dymki idą przez dymek gry (bez ą ć ę ł ń ś ź ż)") end
+  return "własny dymek, czcionka " .. tostring((G.uiFont and G.uiFont("body")) or "ARIALN")
+end)
+
 -- testy z plikow wczytanych wczesniej (nowe okna): U.testChecksExtra = { { name, fn, fullOnly } }
 for _, c in ipairs(U.testChecksExtra or {}) do add(c[1], c[2], c[3]) end
 G.testChecks = G.testChecks or {}

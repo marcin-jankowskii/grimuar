@@ -96,19 +96,60 @@ frame:SetScript("OnEvent", function(_, event, arg1)
     -- 14.11 (gracz: „pasek GCD zaslania ikonki cooldownow, zrob tak, zeby nic na sobie nie lezalo”): raz przesun grupe
     -- WeakAuras Musca „Mage - Bars” (pasek rzucania z GCD i 5 sec rule) pod ikony, w miejsce po Cooldown Managerze.
     -- Przez API WeakAuras (GetData + Add), wiec WeakAuras samo zapisze zmiane; tylko gdy grupa stoi tam, gdzie ja dal pakiet.
+    -- 15.11 (Musca 1.18: „The class pack changed… Update Mage HUD”): po aktualizacji pakietu klasy sprawdz raz jeszcze
+    -- (raz na wersje Musca), czy grupa nie wrocila na stare miejsce (-6); gdy tak, przesun ja znowu.
+    -- 15.11 (gracz: „znowu mana jest podwojnie”): ponowny import pakietu (/run WeakAuras.ImportClassPack) robi kopie
+    -- grupy z dopiskiem „ 2” i wlaczonym „Mage - Mana” (pasek many pod lukami; mane pokazuja luki Grimuara, 14.11
+    -- wylaczony przez load.use_never). Dlatego obie poprawki dzialaja na kazdej kopii („Mage - Bars”, „Mage - Bars 2”…),
+    -- raz na kopie i wersje Musca (gracz moze potem wlaczyc z powrotem). Pasek many tylko w trybie prywatnym.
     C_Timer.After(7, function()
-      if (GrimuarSetupDB.waLayoutV or 0) >= 1 or InCombatLockdown() then return end
+      if InCombatLockdown() then return end
       local WA = WeakAuras
-      local d = WA and WA.GetData and WA.GetData("Mage - Bars")
-      if type(d) ~= "table" or type(WA.Add) ~= "function" then return end
-      GrimuarSetupDB.waLayoutV = 1
-      if d.yOffset == -6 then
-        d.yOffset = -100
-        if pcall(WA.Add, d) then
-          say("WeakAuras: pasek rzucania (GCD) i „5 sec rule” zjechały pod ikony czasów odnowienia, nic na sobie nie leży. Cofnięcie: /wa > Mage - Bars > Y Offset -6.")
-        else
-          d.yOffset = -6
+      local D = type(WeakAurasSaved) == "table" and WeakAurasSaved.displays
+      if not (WA and WA.GetData and type(WA.Add) == "function" and type(D) == "table") then return end
+      local okV, waVer = pcall(C_AddOns.GetAddOnMetadata, "WeakAuras", "Version")
+      waVer = okV and waVer or "?"
+      GrimuarSetupDB.waFix = GrimuarSetupDB.waFix or {}
+      local done = GrimuarSetupDB.waFix
+      local function copies(base)
+        local out, pat = {}, "^" .. base:gsub("%-", "%%-") .. " %d+$"
+        for id in pairs(D) do
+          if type(id) == "string" and (id == base or id:match(pat)) then out[#out + 1] = id end
         end
+        return out
+      end
+      -- stary znacznik 14.11 (waLayoutV) liczy sie jako zrobione dla grupy „Mage - Bars” w tej wersji
+      if (GrimuarSetupDB.waLayoutV or 0) >= 1 and GrimuarSetupDB.waLayoutVer == waVer then done["bars:Mage - Bars:" .. waVer] = true end
+      local moved, hidden = 0, 0
+      for _, id in ipairs(copies("Mage - Bars")) do
+        local key = "bars:" .. id .. ":" .. waVer
+        local d = WA.GetData(id)
+        if not done[key] and type(d) == "table" then
+          done[key] = true
+          if d.yOffset == -6 then
+            d.yOffset = -100
+            if pcall(WA.Add, d) then moved = moved + 1 else d.yOffset = -6 end
+          end
+        end
+      end
+      if G.personal() then
+        for _, id in ipairs(copies("Mage - Mana")) do
+          local key = "mana:" .. id .. ":" .. waVer
+          local d = WA.GetData(id)
+          if not done[key] and type(d) == "table" and type(d.load) == "table" then
+            done[key] = true
+            if not d.load.use_never then
+              d.load.use_never = true
+              if pcall(WA.Add, d) then hidden = hidden + 1 else d.load.use_never = nil end
+            end
+          end
+        end
+      end
+      if moved > 0 then
+        say("WeakAuras: pasek rzucania (GCD) i „5 sec rule” zjechały pod ikony czasów odnowienia, nic na sobie nie leży. Cofnięcie: /wa > Mage - Bars > Y Offset -6.")
+      end
+      if hidden > 0 then
+        say("WeakAuras: pasek many Musca wyłączony (manę pokazują łuki Grimuara). Włączenie: /wa > Mage - Mana > Load > odznacz Never.")
       end
     end)
     -- 14.11: raz wylacz wbudowany Cooldown Manager (dubluje ikony WeakAuras Musca); potem decyduje gracz w opcjach gry

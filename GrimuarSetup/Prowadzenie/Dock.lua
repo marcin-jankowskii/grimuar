@@ -69,24 +69,60 @@ local function createDock()
   dock:SetClampedToScreen(true)
   pcall(function()
     dock:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
-    dock:SetBackdropColor(0.05, 0.06, 0.10, 0.92)
-    dock:SetBackdropBorderColor(0.85, 0.71, 0.36, 0.6) -- zloto jak runy (UX 12.11)
+    -- 15.11 (gracz: „poprawiamy czy zostawiamy?” → styl huba, rowno z Polestarem): tlo i ramka jak panele huba
+    dock:SetBackdropColor(0.051, 0.043, 0.035, 0.95)
+    dock:SetBackdropBorderColor(0.43, 0.35, 0.2, 0.85)
   end)
+  if G.addRuneCorners then pcall(G.addRuneCorners, dock, 12) end
   dock.label = dock:CreateFontString(nil, "OVERLAY")
   dock.label:SetFont(G.TF(), 13, "")
   dock.label:SetPoint("TOPLEFT", dock, "TOPLEFT", 14, -6)
   -- wyglad 13.11: kolorowa belka kategorii z lewej i ikona kroku
   dock.stripe = dock:CreateTexture(nil, "ARTWORK")
   dock.stripe:SetTexture("Interface\\Buttons\\WHITE8X8")
-  dock.stripe:SetWidth(4)
+  dock.stripe:SetWidth(2)
   dock.stripe:SetPoint("TOPLEFT", dock, "TOPLEFT", 1, -1)
   dock.stripe:SetPoint("BOTTOMLEFT", dock, "BOTTOMLEFT", 1, 1)
+  -- ikona w ramce jak slot huba
+  dock.iconBg = dock:CreateTexture(nil, "BORDER")
+  dock.iconBg:SetColorTexture(0.43, 0.35, 0.2, 0.9)
+  dock.iconBg:SetSize(36, 36)
+  dock.iconBg:SetPoint("TOPLEFT", dock, "TOPLEFT", 10, -24)
   dock.icon = dock:CreateTexture(nil, "ARTWORK")
   dock.icon:SetSize(32, 32)
   dock.icon:SetPoint("TOPLEFT", dock, "TOPLEFT", 12, -26)
   dock.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
   dock.label:SetText(C_FROST .. "Grimuar|r" .. C_MUTED .. "   poza questami|r")
+  -- 15.11 (gracz: „tu wolalbym strzalki z gory do przewijania, cos w tym stylu” - zrzut „‹ 66 / 92 ›” z Polestara):
+  -- przewijanie krokow paska w naglowku zamiast przyciskow „Dalej ›” i „‹ Wroc” na dole
+  dock.nav = CreateFrame("Frame", nil, dock)
+  dock.nav:SetSize(84, 18)
+  dock.nav:SetPoint("LEFT", dock.label, "RIGHT", 12, 0)
+  local function navBtn(txt)
+    local b = CreateFrame("Button", nil, dock.nav)
+    b:SetSize(18, 18)
+    b.t = b:CreateFontString(nil, "OVERLAY")
+    b.t:SetFont(G.TF(), 15, "")
+    b.t:SetPoint("CENTER", 0, 1)
+    b.t:SetText(txt)
+    b.t:SetTextColor(0.93, 0.91, 0.86)
+    b:SetScript("OnEnter", function(self) self.t:SetTextColor(0.85, 0.71, 0.36) end)
+    b:SetScript("OnLeave", function(self) self.t:SetTextColor(0.93, 0.91, 0.86) end)
+    b:SetScript("OnClick", function(self) if self.fn then self.fn() end end)
+    return b
+  end
+  dock.navPrev = navBtn("‹")
+  dock.navPrev:SetPoint("LEFT", dock.nav, "LEFT", 0, 0)
+  dock.navText = dock.nav:CreateFontString(nil, "OVERLAY")
+  dock.navText:SetFont(FONT, 12, "")
+  dock.navText:SetTextColor(0.93, 0.91, 0.86)
+  dock.navText:SetPoint("LEFT", dock.navPrev, "RIGHT", 4, 0)
+  dock.navNext = navBtn("›")
+  dock.navNext:SetPoint("LEFT", dock.navText, "RIGHT", 4, 0)
+  dock.nav:Hide()
   dock.more = G.FlatButton(dock, 64, 18, "Więcej")
+  dock.more.hub = true
+  dock.more:Repaint()
   dock.more:SetPoint("TOPRIGHT", dock, "TOPRIGHT", -6, -4)
   dock.more:SetScript("OnClick", function() SlashCmdList["GRIMUAR"]("") end)
   dock.text = dock:CreateFontString(nil, "OVERLAY")
@@ -99,7 +135,7 @@ local function createDock()
   dock.why:SetFont(FONT, 12, "")
   dock.why:SetJustifyH("LEFT")
   dock.why:SetJustifyV("TOP")
-  dock.why:SetTextColor(0.6, 0.63, 0.69)
+  dock.why:SetTextColor(0.64, 0.61, 0.55)
   dock.btns = {}
   dock.glow = CreateFrame("Frame", nil, dock, "BackdropTemplate")
   dock.glow:SetPoint("TOPLEFT", dock, "TOPLEFT", -3, 3)
@@ -160,11 +196,11 @@ local function updateDock(steps)
   if pos == 1 then dock.lastKey = s.key end
   -- jeden licznik: wlasny licznik kroku (plan, ustawienia, lochy) albo pozycja na pasku
   local cat, col = stepCategory(s.key)
-  local cnt = s.count or ((#cands > 1) and (pos .. " z " .. #cands) or nil)
-  dock.label:SetText(C_GOLD .. "Grimuar|r   " .. col .. cat .. (cnt and (" · " .. cnt) or "") .. "|r")
+  local cnt = s.count
+  -- styl huba: jeden zloty akcent; kategoria szara, cienki zloty pasek z lewej
+  dock.label:SetText(C_GOLD .. "Grimuar|r   " .. C_MUTED .. cat .. (cnt and (" · " .. cnt) or "") .. "|r")
   pcall(function()
-    local r, g, b = col:match("|cff(%x%x)(%x%x)(%x%x)")
-    dock.stripe:SetVertexColor(tonumber(r, 16) / 255, tonumber(g, 16) / 255, tonumber(b, 16) / 255, 1)
+    dock.stripe:SetVertexColor(0.85, 0.71, 0.36, 0.9)
     dock.icon:SetTexture(G.iconFor and G.iconFor(s.key) or "Interface\\Icons\\INV_Misc_Book_09")
   end)
   local pf = _G.PolestarGuideFrame
@@ -201,19 +237,32 @@ local function updateDock(steps)
   if s.key ~= "fight" and s.key ~= "dead" then
     table.insert(list, { "Pomiń", function() skipped[s.key] = true; if G.refreshAll then G.refreshAll() end end })
   end
-  if #cands > 1 and s.key ~= "fight" and s.key ~= "dead" then
-    local nextSt = cands[pos + 1]
-    table.insert(list, { "Dalej ›", function()
-      dock.view = nextSt and nextSt.key or nil
+  -- ‹ pos / n › w naglowku (krok paska Grimuara); przewijanie w kolko, pierwszy = bez dock.view
+  local canNav = #cands > 1 and s.key ~= "fight" and s.key ~= "dead"
+  dock.nav:SetShown(canNav)
+  if canNav then
+    dock.navText:SetText(pos .. " / " .. #cands)
+    dock.nav:SetWidth(18 + 4 + (dock.navText:GetStringWidth() or 30) + 4 + 18)
+    local function go(i)
+      if i < 1 then i = #cands elseif i > #cands then i = 1 end
+      dock.view = (i > 1 and cands[i]) and cands[i].key or nil
       if G.refreshAll then G.refreshAll() end
-    end })
+    end
+    dock.navPrev.fn = function() go(pos - 1) end
+    dock.navNext.fn = function() go(pos + 1) end
   end
-  if pos > 1 then
-    table.insert(list, { "‹ Wróć", function()
-      dock.view = nil
-      if G.refreshAll then G.refreshAll() end
-    end })
+  -- 15.11 (gracz: „czasami tak nachodzi”): strzalki przypiete z prawej, przed „Koncze gre” / „Wiecej”; napis naglowka
+  -- dostaje tylko pozostale miejsce (dlugi skraca sie wielokropkiem), wiec nic na siebie nie wchodzi
+  local right = (dock.endBtn and dock.endBtn:IsShown()) and dock.endBtn or dock.more
+  local used = 14 + 6 + (dock.more:GetWidth() or 64) + ((dock.endBtn and dock.endBtn:IsShown()) and (4 + (dock.endBtn:GetWidth() or 84)) or 0)
+  if canNav then
+    dock.nav:ClearAllPoints()
+    dock.nav:SetPoint("RIGHT", right, "LEFT", -8, 0)
+    used = used + 8 + (dock.nav:GetWidth() or 80)
   end
+  pcall(dock.label.SetWordWrap, dock.label, false)
+  dock.label:SetJustifyH("LEFT")
+  dock.label:SetWidth(math.max(60, width - used - 8))
   if S.undo then
     table.insert(list, { "Cofnij", function()
       local u = S.undo
@@ -231,6 +280,7 @@ local function updateDock(steps)
     local b = dock.btns[i]
     if not b then
       b = G.FlatButton(dock, 58, 20, "")
+      b.hub = true
       b:SetScript("OnClick", function(self) if self.fn then self.fn() end end)
       dock.btns[i] = b
     end
@@ -250,6 +300,7 @@ local function updateDock(steps)
     x = x + w + 6
   end
   if #list > 0 then h = h + 28 end
+  if dock.endBtn and not dock.endBtn.hub then dock.endBtn.hub = true dock.endBtn:Repaint() end
   dock:SetHeight(math.max(h + 10, 66))
   dock:Show()
   return true
@@ -354,26 +405,26 @@ local function createHUD()
   hud.step:SetWordWrap(false)
   hud:SetScript("OnClick", function() SlashCmdList["GRIMUAR"]("") end)
   hud:SetScript("OnEnter", function(self)
-    GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
-    GameTooltip:AddLine("Grimuar: tempo i sesja")
-    GameTooltip:AddLine("XP w tej sesji: " .. fmtK(S.xpGained), 1, 1, 1)
+    G.TT:SetOwner(self, "ANCHOR_BOTTOM")
+    G.TT:AddLine("Grimuar: tempo i sesja")
+    G.TT:AddLine("XP w tej sesji: " .. fmtK(S.xpGained), 1, 1, 1)
     local xph = xpPerHour()
-    if xph then GameTooltip:AddLine("XP na godzinę: " .. fmtK(xph), 1, 1, 1) end
-    GameTooltip:AddLine("Rested: " .. restedPercent() .. "% poziomu", 1, 1, 1)
-    GameTooltip:AddLine("Złoto w tej sesji: " .. fmtMoney(GetMoney() - (S.money0 or GetMoney())), 1, 1, 1)
-    GameTooltip:AddLine(hearthInfo(), 1, 1, 1)
+    if xph then G.TT:AddLine("XP na godzinę: " .. fmtK(xph), 1, 1, 1) end
+    G.TT:AddLine("Rested: " .. restedPercent() .. "% poziomu", 1, 1, 1)
+    G.TT:AddLine("Złoto w tej sesji: " .. fmtMoney(GetMoney() - (S.money0 or GetMoney())), 1, 1, 1)
+    G.TT:AddLine(hearthInfo(), 1, 1, 1)
     -- 15.11 (R30 P15): szczegoly tempa wedlug trasy Polestara
     local okT, tip = false, nil
     if G.paceTip then okT, tip = pcall(G.paceTip) end
     if okT and type(tip) == "table" and #tip > 0 then
-      GameTooltip:AddLine(" ")
-      GameTooltip:AddLine(G.tr and G.tr("Tempo według trasy Polestara") or "Tempo według trasy Polestara", 0.85, 0.71, 0.36)
-      for _, ln in ipairs(tip) do GameTooltip:AddLine(ln, 1, 1, 1, true) end
+      G.TT:AddLine(" ")
+      G.TT:AddLine(G.tr and G.tr("Tempo według trasy Polestara") or "Tempo według trasy Polestara", 0.85, 0.71, 0.36)
+      for _, ln in ipairs(tip) do G.TT:AddLine(ln, 1, 1, 1, true) end
     end
-    GameTooltip:AddLine("Klik: okno Grimuara. Przeciągnij: przesuń. /grimuar sesja 60 włącza minutnik.", 0.7, 0.7, 0.7, true)
-    GameTooltip:Show()
+    G.TT:AddLine("Klik: okno Grimuara. Przeciągnij: przesuń. /grimuar sesja 60 włącza minutnik.", 0.7, 0.7, 0.7, true)
+    G.TT:Show()
   end)
-  hud:SetScript("OnLeave", function() GameTooltip:Hide() end)
+  hud:SetScript("OnLeave", function() G.TT:Hide() end)
   updateHUD()
 end
 

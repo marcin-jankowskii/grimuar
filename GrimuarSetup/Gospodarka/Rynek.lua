@@ -140,7 +140,8 @@ local function sellList()
       local it = C_Container.GetContainerItemInfo(bag, slot)
       if it and it.itemID and not it.isBound then
         local _, _, _, _, _, classID = C_Item.GetItemInfoInstant(it.itemID)
-        if classID == E.Tradegoods and not (G.itemNeed and G.itemNeed(it.itemID)) and not (G.itemMark and G.itemMark(it.itemID) == "fav") then
+        if classID == E.Tradegoods and not (G.itemNeed and G.itemNeed(it.itemID)) and not (G.itemMark and G.itemMark(it.itemID) == "fav")
+          and not (G.isProfTool and G.isProfTool(it.itemID)) then
           local r = by[it.itemID]
           if not r then r = itemRow(it.itemID, { qty = 0, bag = bag, slot = slot }) by[it.itemID] = r out[#out + 1] = r end
           r.qty = r.qty + (it.stackCount or 1)
@@ -427,12 +428,12 @@ local function build()
     r:SetScript("OnEnter", function(self)
       local it = self.index and S.results[self.index]
       if not it then return end
-      GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-      if GameTooltip.SetItemKey then pcall(GameTooltip.SetItemKey, GameTooltip, it.key.itemID, it.key.itemLevel or 0, it.key.itemSuffix or 0)
-      else GameTooltip:SetItemByID(it.itemID) end
-      GameTooltip:Show()
+      G.TT:SetOwner(self, "ANCHOR_RIGHT")
+      if G.TT.SetItemKey then pcall(G.TT.SetItemKey, G.TT, it.key.itemID, it.key.itemLevel or 0, it.key.itemSuffix or 0)
+      else G.TT:SetItemByID(it.itemID) end
+      G.TT:Show()
     end)
-    r:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    r:SetScript("OnLeave", function() G.TT:Hide() end)
     rowFrames[i] = r
   end
   mid:EnableMouseWheel(true)
@@ -740,3 +741,10 @@ SlashCmdList["GRIMUARRYNEK"] = function()
 end
 
 G.rynekRefresh = function() if frame and frame:IsShown() then pcall(refresh) end end
+-- 15.11 (Porzadki w torbach): „Rynek > Sprzedaj” przy otwartym domu aukcyjnym
+G.rynekOpenSell = function()
+  if not (_G.AuctionHouseFrame and AuctionHouseFrame:IsShown()) then return end
+  if not (frame and frame:IsShown()) then pcall(openMarket) end
+  S.mode = "sell"
+  browse()
+end

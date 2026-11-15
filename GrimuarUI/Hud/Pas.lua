@@ -12,6 +12,15 @@ local G = U.G or {}
 local HEARTH = 6948
 local SLOTS = { "drink", "food", "band", "pot", "hearth" }
 local LABEL = { drink = "picie", food = "jedzenie", band = "bandaż", pot = "mikstura", hearth = "dom" }
+-- 15.11 (gracz: „bandazy nie mam pod zadnym przyciskiem”): klawisz w rogu przycisku, jak na paskach akcji. Te same
+-- przedmioty maja klawisze z Grimuara: makra Bandaz (C), Mikstura (V), Kamien (H), picie i jedzenie na pasku 2 (Z, X).
+local BIND = { drink = "MULTIACTIONBAR1BUTTON7", food = "MULTIACTIONBAR1BUTTON8", band = "MACRO Bandaz", pot = "MACRO Mikstura",
+  hearth = "MACRO Kamien" }
+local function keyLabel(kind)
+  local k = BIND[kind] and GetBindingKey(BIND[kind])
+  if not k then return "" end
+  return (k:gsub("SHIFT%-", "S"):gsub("CTRL%-", "C"):gsub("ALT%-", "A"))
+end
 local P
 local K = { fights = 0, usedD = 0, usedF = 0, lastD = nil, lastF = nil, combat = false, low = false }
 
@@ -75,14 +84,18 @@ local function build()
     b.lab = U.Text(b, 9, "body", C.faint)
     b.lab:SetPoint("TOP", b, "BOTTOM", 0, -1) b.lab:SetJustifyH("CENTER")
     b.lab:SetText(LABEL[kind])
+    b.key = U.Text(b, 11, "body", C.gold, "OUTLINE")
+    b.key:SetPoint("TOPRIGHT", -3, -3) b.key:SetJustifyH("RIGHT")
+    b.key:SetText(keyLabel(kind))
+    b.kind = kind
     local hl = b:CreateTexture(nil, "HIGHLIGHT") hl:SetAllPoints(b.icon) hl:SetColorTexture(1, 1, 1, 0.12)
     b:SetScript("OnEnter", function(self)
       if not self.itemID then return end
-      GameTooltip:SetOwner(self, "ANCHOR_TOP")
-      pcall(GameTooltip.SetItemByID, GameTooltip, self.itemID)
-      GameTooltip:Show()
+      U.TT:SetOwner(self, "ANCHOR_TOP")
+      pcall(U.TT.SetItemByID, U.TT, self.itemID)
+      U.TT:Show()
     end)
-    b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    b:SetScript("OnLeave", function() U.TT:Hide() end)
     b.kind = kind
     P.btn[kind] = b
   end
@@ -205,10 +218,15 @@ local function track()
 end
 
 local ev = CreateFrame("Frame")
-for _, e in ipairs({ "PLAYER_LOGIN", "BAG_UPDATE_DELAYED", "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED", "BAG_UPDATE_COOLDOWN" }) do
+for _, e in ipairs({ "PLAYER_LOGIN", "BAG_UPDATE_DELAYED", "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED", "BAG_UPDATE_COOLDOWN",
+  "UPDATE_BINDINGS" }) do
   pcall(ev.RegisterEvent, ev, e)
 end
 ev:SetScript("OnEvent", function(_, e)
+  if e == "UPDATE_BINDINGS" then
+    for _, b in pairs(P and P.btn or {}) do if b.key then b.key:SetText(keyLabel(b.kind)) end end
+    return
+  end
   if e == "PLAYER_LOGIN" then
     C_Timer.After(8, function()
       pcall(build)

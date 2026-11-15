@@ -165,20 +165,58 @@ function U.OknoRow(parent, h)
   r:SetScript("OnClick", function(self, button) if self.onClick then pcall(self.onClick, button) end end)
   r:SetScript("OnEnter", function(self)
     if not self.tip then return end
-    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    pcall(self.tip, GameTooltip)
-    GameTooltip:Show()
+    U.TT:SetOwner(self, "ANCHOR_RIGHT")
+    pcall(self.tip, U.TT)
+    U.TT:Show()
   end)
-  r:SetScript("OnLeave", function() GameTooltip:Hide() end)
+  r:SetScript("OnLeave", function() U.TT:Hide() end)
   return r
 end
 
--- /hub okna <nazwa>: wlacza i wylacza okno Grimuara (kupiec, trener, poczta, bank, profesja, lup, rzuty)
+-- 15.11 („Mistrz lotow i Handel”): przycisk w stylu U.Button, ktory naciska przycisk okna gry (InsecureActionButtonTemplate
+-- typu „click”, sposob z ForeverSkin Windows\More.lua): w PreClick ustaw self:SetAttribute("clickbutton", przycisk gry albo nil),
+-- gra wykona klik swoim kodem. Dla funkcji, ktore moga byc chronione (AcceptTrade). Bez szablonu w kliencie: nil.
+function U.OknoKlik(parent, text, w, h, primary)
+  local ok, b = pcall(CreateFrame, "Button", nil, parent, "InsecureActionButtonTemplate")
+  if not (ok and b) then return nil end
+  b:SetSize(w, h)
+  b:RegisterForClicks("LeftButtonUp")
+  b:SetAttribute("useOnKeyDown", false)
+  b:SetAttribute("type", "click")
+  b.bg = b:CreateTexture(nil, "BACKGROUND")
+  b.bg:SetAllPoints()
+  U.Border(b, C.edge)
+  b.label = U.Text(b, 13, "title", primary and C.bg or C.text)
+  b.label:SetPoint("CENTER", 0, 0)
+  b.label:SetJustifyH("CENTER")
+  b.label:SetJustifyV("MIDDLE")
+  b.label:SetText(text)
+  function b:Paint(hover)
+    local off = not self:IsEnabled()
+    if primary and not off then
+      self.bg:SetColorTexture(C.gold[1], C.gold[2], C.gold[3], hover and 1 or 0.9)
+      U.BorderColor(self, C.gold)
+      U.Color(self.label, C.bg)
+    else
+      local k = (hover and not off) and 1.45 or 1
+      self.bg:SetColorTexture(0.102 * k, 0.082 * k, 0.059 * k, 1)
+      U.BorderColor(self, (hover and not off) and C.gold or C.edge)
+      U.Color(self.label, off and C.faint or C.text)
+    end
+  end
+  b:HookScript("OnEnter", function(self) self:Paint(true) end)
+  b:HookScript("OnLeave", function(self) self:Paint(false) end)
+  b:Paint(false)
+  return b
+end
+
+-- /hub okna <nazwa>: wlacza i wylacza okno Grimuara (kupiec, trener, poczta, bank, profesja, lup, rzuty;
+-- 15.11 „Mistrz lotow i Handel”: lot, handel)
 function U.oknaCmd(key)
   local d = db()
   d.oknaOff = d.oknaOff or {}
   if not key or key == "" then
-    U.say("okna Grimuara: /hub okna kupiec|trener|poczta|bank|profesja|lup|rzuty przełącza okno Grimuara albo okno gry.")
+    U.say("okna Grimuara: /hub okna kupiec|trener|poczta|bank|profesja|lup|rzuty|lot|handel przełącza okno Grimuara albo okno gry.")
     return
   end
   d.oknaOff[key] = not d.oknaOff[key] or nil

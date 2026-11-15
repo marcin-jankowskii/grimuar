@@ -1,7 +1,8 @@
 -- Grimuar UI: zakladka Ksiega (14.11, R24 P3/P6/P7; jak glosariusz Wiedzmina 3). Trzy strony:
 -- * Bestiariusz: stwory, z ktorymi walczyles (KsiegaBestie.lua): poziomy, typ, czary, ucieczki, lupy, porada maga;
 -- * Rywale: gracze Hordy ze starc (Spy, KsiegaRywale.lua): bilans, ostatnie starcie, rada na klase, Twoja notatka;
--- * Krainy: postep zadan w strefach (Questie, KsiegaKrainy.lua).
+-- * Krainy: postep zadan w strefach (Questie, KsiegaKrainy.lua); od 15.11 (R30 P32) pod spodem karty rzadkich stworow
+--   i skarbow strefy z Polestara (KsiegaRzadkie.lua).
 local ADDON, U = ...
 local C = U.C
 
@@ -140,8 +141,13 @@ local function drawKrainy()
   local items, pick = {}, nil
   for _, z in ipairs(list) do
     local pct = z.total > 0 and math.floor(z.done / z.total * 100 + 0.5) or 0
-    items[#items + 1] = { key = z.name, title = z.name, sub = "zadania " .. z.done .. "/" .. z.total .. " · poziom " .. (z.lmin or "?") .. "–" .. (z.lmax or "?"),
-      tag = pct .. "%", tagCol = pct >= 100 and C.ok or (pct > 0 and C.gold or C.faint), col = z.name == here and C.gold or C.text }
+    -- 15.11 (R30 P25): poziom strefy i groznosc z Polestara, w kolorze trudnosci
+    local zi = U.zoneInfo and U.zoneInfo(z.ui, z.lmin, z.lmax)
+    z.zi = zi
+    items[#items + 1] = { key = z.name, title = z.name,
+      sub = (zi and zi.text and ("strefa " .. zi.text .. " · ") or "") .. "zadania " .. z.done .. "/" .. z.total,
+      tag = pct .. "%", tagCol = pct >= 100 and C.ok or (pct > 0 and C.gold or C.faint),
+      col = z.name == here and C.gold or (zi and zi.mult > 1 and zi.col) or C.text }
     if S.sel.krainy == z.name then pick = z end
     if not S.sel.krainy and z.name == here then pick = z S.sel.krainy = z.name end
   end
@@ -155,10 +161,22 @@ local function drawKrainy()
     L[#L + 1] = "\n" .. GOLD .. pick.name:upper() .. "|r"
     L[#L + 1] = bar .. "  " .. math.floor(pct * 100 + 0.5) .. "%"
     L[#L + 1] = "Zadania: " .. pick.done .. " z " .. pick.total .. " · poziomy zadań " .. (pick.lmin or "?") .. "–" .. (pick.lmax or "?")
+    local zi = pick.zi
+    if zi and zi.min then
+      local hex = string.format("|cff%02x%02x%02x", zi.col[1] * 255, zi.col[2] * 255, zi.col[3] * 255)
+      L[#L + 1] = "Poziom strefy: " .. hex .. zi.text .. "|r" .. (zi.src == "questy" and " (wg zadań)" or "")
+      if zi.mult >= 20 then
+        L[#L + 1] = MUTED .. "Za wysoko na Twój poziom: trasa Polestara omija tę strefę, a moby zabiją Cię w kilka sekund.|r"
+      elseif zi.mult >= 3 then
+        L[#L + 1] = MUTED .. "Groźna: moby o 3+ poziomy wyżej. Przechodź drogami, nie skracaj przez pola.|r"
+      end
+    end
     L[#L + 1] = "Rzadkie stwory spotkane: " .. (pick.rares or 0)
     L[#L + 1] = MUTED .. "Nie musisz robić wszystkiego: trasa Grimuara bierze tylko te, które się opłacają. 100% to wyzwanie na później.|r"
   end
   S.det:Set(table.concat(L, "\n"))
+  -- 15.11 (R30 P32): rzadkie stwory i skarby strefy jako karty pod tekstem (KsiegaRzadkie.lua, Polestar.Rares)
+  if pick and U.ksiegaRares then pcall(U.ksiegaRares, S.det, pick.ui) end
 end
 
 -- ---------- uklad ----------
@@ -166,6 +184,7 @@ local DRAW = { bestie = drawBestie, rywale = drawRywale, krainy = drawKrainy }
 function U.ksiegaRefresh()
   if not (S.det and S.det:IsVisible()) then return end
   S.note:Hide() S.noteSave:Hide()
+  if U.ksiegaRares then pcall(U.ksiegaRares, S.det, nil) end -- 15.11 (R30 P32): karty rzadkich tylko w Krainach
   local ok, e = pcall(DRAW[S.page])
   if not ok and U.logError then U.logError("ksiega/" .. S.page, e) end
 end

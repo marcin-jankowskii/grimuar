@@ -74,6 +74,14 @@ local function refresh()
   local ok, list = pcall(G.profPanelRows)
   if not ok or type(list) ~= "table" or #list == 0 then panel:Hide() return end
   for _, r in ipairs(rows) do r:Hide() end
+  -- 15.11: zwiniety panel to sam naglowek
+  if panel.fold then panel.fold.Paint() end
+  if GrimuarSetupDB.profPanelFolded then
+    panel:SetHeight(36)
+    place()
+    panel:Show()
+    return
+  end
   local y = -34
   for i, it in ipairs(list) do
     local r = row(i)
@@ -110,6 +118,7 @@ local function make()
   panel.sub:SetPoint("LEFT", panel.title, "RIGHT", 8, -1)
   panel.sub:SetText("klik: więcej, K: okno profesji")
   if G.addRuneCorners then pcall(G.addRuneCorners, panel, 18) end
+  if G.FoldButton then panel.fold = G.FoldButton(panel, "profPanelFolded", function() pcall(refresh) end) end
   panel:SetMovable(true)
   panel:EnableMouse(true)
   panel:RegisterForDrag("LeftButton")

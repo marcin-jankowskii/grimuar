@@ -5,6 +5,8 @@
 local ADDON, U = ...
 local G = _G.GrimuarAPI or {}
 U.G = G
+-- 15.11: dymki Grimuara z polskimi literami (GrimuarSetup Rdzen\Dymek.lua); bez niego dymek gry
+U.TT = G.TT or GameTooltip
 
 local WHITE = "Interface\\Buttons\\WHITE8X8"
 local ARIALN = "Fonts\\ARIALN.TTF"

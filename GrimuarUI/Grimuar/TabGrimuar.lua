@@ -57,12 +57,12 @@ local function build(page)
     r:EnableMouse(true)
     r:SetScript("OnEnter", function(self)
       if not self.why or self.why == "" then return end
-      GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-      GameTooltip:SetText(self.short or "", 1, 1, 1)
-      GameTooltip:AddLine(self.why, 0.85, 0.82, 0.75, true)
-      GameTooltip:Show()
+      U.TT:SetOwner(self, "ANCHOR_RIGHT")
+      U.TT:SetText(self.short or "", 1, 1, 1)
+      U.TT:AddLine(self.why, 0.85, 0.82, 0.75, true)
+      U.TT:Show()
     end)
-    r:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    r:SetScript("OnLeave", function() U.TT:Hide() end)
     S.rows[i] = r
   end
   S.optional = U.Para(L, 12, 360, C.faint)

@@ -4,6 +4,9 @@
 -- Na mapie: Ty (duza strzalka z poswiata), cele zadan z Questie (romb w kolorze zadania), „?” = gdzie oddac gotowe,
 -- krok planu Grimuara z linia, Twoj znacznik, zwloki. Warstwy wlaczasz w panelu. Panel: zadania tutaj od najblizszego
 -- (odleglosc i kierunek); LPM prowadzi strzalka Polestara, PPM otwiera zadanie w Dzienniku. Dane zadan: MapaQuestie.lua.
+-- 15.11 (makieta „Znaczniki Grimuara” M1-M4, M10; gracz: „super, podobaja mi sie, dodaj”): znaczniki jak na kompasie
+-- (Hub\Znaczniki.lua): cel zadania = romb w kolorze zadania ze znakiem czynnosci, „?” i „!” w medalionach, cel strzalki
+-- = zlota runa, uslugi w zlotym pierscieniu. Pola klikniec, dymki i filtry bez zmian.
 local ADDON, U = ...
 local G, C = U.G, U.C
 
@@ -144,6 +147,11 @@ local function mark(i)
   m:SetFrameLevel(M.pins:GetFrameLevel() + 6)
   m.d = U.Diamond(m, 20, C.gold, true)
   m.d:SetPoint("CENTER")
+  -- 15.11 (znaczniki M1): cel strzalki Polestara i znacznik z huba = zlota runa jak na kompasie (Hub\Znaczniki.lua);
+  -- romb zostaje dla kroku planu, znacznika gry i zwlok
+  m.zn = U.Znacznik(m, 34)
+  m.zn:SetPoint("CENTER")
+  m.zn:Hide()
   m.label = U.Text(m, 13, "title", C.text, "OUTLINE")
   m.label:SetPoint("BOTTOM", m, "TOP", 0, 2)
   m.label:SetJustifyH("CENTER")
@@ -155,11 +163,13 @@ local function placeMarks()
   local W, H = M.art:GetWidth(), M.art:GetHeight()
   local id, n = M.mapID, 0
   M.target = nil
-  local function add(x, y, col, text, filled)
+  local function add(x, y, col, text, filled, kind)
     if not x or not y then return end
     n = n + 1
     local m = mark(n)
-    m.d:Set(col, filled)
+    m.d:SetShown(kind == nil)
+    m.zn:SetShown(kind ~= nil)
+    if kind then m.zn:Set(kind) else m.d:Set(col, filled) end
     m.label:SetText(text or "")
     m:ClearAllPoints()
     m:SetPoint("CENTER", M.art, "TOPLEFT", x * W, -y * H)
@@ -202,12 +212,12 @@ local function placeMarks()
       end
     end
     if tx then
-      add(tx, ty, C.frost, label, true)
+      add(tx, ty, C.frost, label, true, "cel")
       M.target = { tx, ty }
     end
   elseif M.pin and M.pin[1] == id then
     M.navSig = nil
-    add(M.pin[2], M.pin[3], C.frost, M.pin[4] or "Znacznik", true)
+    add(M.pin[2], M.pin[3], C.frost, M.pin[4] or "Znacznik", true, "cel")
     M.target = { M.pin[2], M.pin[3] }
   end
   local wp = C_Map.GetUserWaypoint and U.call(C_Map.GetUserWaypoint)
@@ -231,14 +241,16 @@ local function guide(x, y, label)
 end
 
 -- ---------- znaczniki zadan (Questie) ----------
+-- 15.11 (znaczniki M2, M3): pole klikniecia jak dawniej (cel 17/21, „?” 24/30), rysunek z Hub\Znaczniki.lua wiekszy,
+-- bo tekstura ma pusty brzeg: romb celu ~0,69 wielkosci (jak dawny romb 13/17 po obrocie), medalion „?” ~0,63
 local function pinSize(p, big)
   local d = p.d
   if d and d.kind == "done" then
     local s = big and 30 or 24
-    p:SetSize(s, s) p.q:SetSize(s, s)
+    p:SetSize(s, s) p.zn:SetSizeAll(s * 1.2)
   else
     local s = big and 17 or 13
-    p:SetSize(s + 4, s + 4) p.o:SetSize(s, s) p.i:SetSize(s - 4, s - 4)
+    p:SetSize(s + 4, s + 4) p.zn:SetSizeAll(s * 2)
   end
 end
 local function highlight(qid)
@@ -253,38 +265,32 @@ end
 local function pinEnter(self)
   local d = self.d
   if not d then return end
-  GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-  GameTooltip:SetText(d.title or "", C.gold[1], C.gold[2], C.gold[3])
+  U.TT:SetOwner(self, "ANCHOR_RIGHT")
+  U.TT:SetText(d.title or "", C.gold[1], C.gold[2], C.gold[3])
   if d.kind == "done" then
-    GameTooltip:AddLine("Gotowe — oddaj: " .. (d.name or "?"), C.ok[1], C.ok[2], C.ok[3])
+    U.TT:AddLine("Gotowe — oddaj: " .. (d.name or "?"), C.ok[1], C.ok[2], C.ok[3])
   else
-    if d.text then GameTooltip:AddLine(d.text, 1, 1, 1, true) end
-    if d.name and d.name ~= d.text then GameTooltip:AddLine(d.name, 0.75, 0.75, 0.75) end
+    if d.text then U.TT:AddLine(d.text, 1, 1, 1, true) end
+    if d.name and d.name ~= d.text then U.TT:AddLine(d.name, 0.75, 0.75, 0.75) end
   end
   local px, py = playerPos(M.mapID)
   local m, dir
   if px then m, dir = U.mapDistance(M.mapID, px, py, d.x, d.y) end
-  if m then GameTooltip:AddLine(U.fmtDistance(m) .. " na " .. dir, C.muted[1], C.muted[2], C.muted[3]) end
-  GameTooltip:AddLine("LPM: prowadź strzałką · PPM: w Dzienniku", C.faint[1], C.faint[2], C.faint[3])
-  GameTooltip:Show()
+  if m then U.TT:AddLine(U.fmtDistance(m) .. " na " .. dir, C.muted[1], C.muted[2], C.muted[3]) end
+  U.TT:AddLine("LPM: prowadź strzałką · PPM: w Dzienniku", C.faint[1], C.faint[2], C.faint[3])
+  U.TT:Show()
   highlight(d.qid)
 end
 local function qpin(i)
   local p = M.qp[i]
   if p then return p end
   p = CreateFrame("Button", nil, M.pins)
-  p.o = p:CreateTexture(nil, "ARTWORK")
-  p.o:SetPoint("CENTER")
-  p.o:SetColorTexture(0.06, 0.05, 0.035, 0.95)
-  p.i = p:CreateTexture(nil, "ARTWORK", nil, 1)
-  p.i:SetPoint("CENTER")
-  pcall(p.o.SetRotation, p.o, math.rad(45))
-  pcall(p.i.SetRotation, p.i, math.rad(45))
-  p.q = p:CreateTexture(nil, "ARTWORK", nil, 2)
-  p.q:SetPoint("CENTER")
+  -- 15.11 (znaczniki M2, M3): romb w kolorze zadania ze znakiem czynnosci albo medalion „?” (zamiast rombu i ikony Questie)
+  p.zn = U.Znacznik(p, 26)
+  p.zn:SetPoint("CENTER")
   p:RegisterForClicks("LeftButtonUp", "RightButtonUp")
   p:SetScript("OnEnter", pinEnter)
-  p:SetScript("OnLeave", function() GameTooltip:Hide() highlight(nil) end)
+  p:SetScript("OnLeave", function() U.TT:Hide() highlight(nil) end)
   p:SetScript("OnClick", function(self, btn)
     local d = self.d
     if not d then return end
@@ -311,16 +317,14 @@ local function placeQuest()
       local p = qpin(n)
       p.d = d
       local done = d.kind == "done"
-      p.o:SetShown(not done)
-      p.i:SetShown(not done)
-      p.q:SetShown(done)
       if done then
-        p.q:SetTexture(U.QUEST_DONE_ICON)
+        p.zn:Set("oddaj")
         p:SetFrameLevel(M.pins:GetFrameLevel() + 4)
       else
-        p.i:SetColorTexture(d.col[1], d.col[2], d.col[3], 1)
+        p.zn:Set("zadanie", { col = d.col, glyph = U.ZN_TYPE[d.otype or ""] })
         p:SetFrameLevel(M.pins:GetFrameLevel() + 2)
       end
+      p.zn:SetFrameLevel(p:GetFrameLevel() + 1)
       pinSize(p, false)
       p:ClearAllPoints()
       p:SetPoint("CENTER", M.art, "TOPLEFT", d.x * W, -d.y * H)
@@ -340,28 +344,31 @@ local function placeQuest()
     if not p then
       p = CreateFrame("Button", nil, M.pins)
       p:SetSize(20, 20)
-      p.i = p:CreateTexture(nil, "ARTWORK")
-      p.i:SetAllPoints()
+      -- 15.11 (znaczniki M4): zloty medalion „!” (trasa Polestara) albo szary (spoza trasy) zamiast ikon Questie
+      p.zn = U.Znacznik(p, 28)
+      p.zn:SetPoint("CENTER")
       p:RegisterForClicks("LeftButtonUp")
       p:SetScript("OnEnter", function(self)
         local a = self.d
         if not a then return end
-        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:SetText("Do wzięcia u: " .. (a.name or "?"), C.gold[1], C.gold[2], C.gold[3])
+        U.TT:SetOwner(self, "ANCHOR_RIGHT")
+        U.TT:SetText("Do wzięcia u: " .. (a.name or "?"), C.gold[1], C.gold[2], C.gold[3])
         for _, q in ipairs(a.quests) do
           local col = q.route and C.text or C.faint
-          GameTooltip:AddLine((q.level and ("[" .. q.level .. "] ") or "") .. q.title .. (q.route and "  · trasa Polestara" or ""), col[1], col[2], col[3])
+          U.TT:AddLine((q.level and ("[" .. q.level .. "] ") or "") .. q.title .. (q.route and "  · trasa Polestara" or ""), col[1], col[2], col[3])
         end
-        GameTooltip:AddLine("LPM: prowadź strzałką", C.faint[1], C.faint[2], C.faint[3])
-        GameTooltip:Show()
+        U.TT:AddLine("LPM: prowadź strzałką", C.faint[1], C.faint[2], C.faint[3])
+        U.TT:Show()
       end)
-      p:SetScript("OnLeave", function() GameTooltip:Hide() end)
+      p:SetScript("OnLeave", function() U.TT:Hide() end)
       p:SetScript("OnClick", function(self) if self.d then guide(self.d.x, self.d.y, "Weź: " .. (self.d.name or "zadanie")) end end)
       M.ap[an] = p
     end
     p.d = d
     p:SetFrameLevel(M.pins:GetFrameLevel() + (d.route and 3 or 2))
-    p.i:SetTexture(d.route and U.QUEST_AVAIL_ICON or U.QUEST_AVAIL_GRAY)
+    p.zn:SetFrameLevel(p:GetFrameLevel() + 1)
+    p.zn:Set(d.route and "wez" or "wez_szary")
+    p.zn:SetSizeAll(d.route and 28 or 26)
     p:SetAlpha(d.route and 1 or 0.7)
     p:ClearAllPoints()
     p:SetPoint("CENTER", M.art, "TOPLEFT", d.x * W, -d.y * H)
@@ -378,14 +385,9 @@ local function svcPin(i)
   p = CreateFrame("Button", nil, M.pins)
   p:SetSize(22, 22)
   p:SetFrameLevel(M.pins:GetFrameLevel() + 1)
-  p.bg = p:CreateTexture(nil, "BACKGROUND")
-  p.bg:SetTexture("Interface\\CharacterFrame\\TempPortraitAlphaMask")
-  p.bg:SetVertexColor(0.05, 0.04, 0.03, 0.75)
-  p.bg:SetPoint("CENTER")
-  p.bg:SetSize(24, 24)
-  p.i = p:CreateTexture(nil, "ARTWORK")
-  p.i:SetPoint("CENTER")
-  p.i:SetSize(18, 18)
+  -- 15.11 (znaczniki M10): zloty pierscien uslugi z ikona gry w srodku (dawniej ciemne kolo pod ikona, ten sam obrys 24 px)
+  p.zn = U.Znacznik(p, 34)
+  p.zn:SetPoint("CENTER")
   p.t = U.Text(p, 11, "body", C.text, "OUTLINE")
   p.t:SetPoint("TOP", p, "BOTTOM", 0, -1)
   p.t:SetJustifyH("CENTER")
@@ -393,18 +395,18 @@ local function svcPin(i)
   p:SetScript("OnEnter", function(self)
     local d = self.d
     if not d then return end
-    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    GameTooltip:SetText(d.name or d.kind.pl, C.gold[1], C.gold[2], C.gold[3])
-    if d.sub and d.sub ~= "" then GameTooltip:AddLine("<" .. d.sub .. ">", 1, 1, 1) end
-    GameTooltip:AddLine(d.kind.pl, C.muted[1], C.muted[2], C.muted[3])
+    U.TT:SetOwner(self, "ANCHOR_RIGHT")
+    U.TT:SetText(d.name or d.kind.pl, C.gold[1], C.gold[2], C.gold[3])
+    if d.sub and d.sub ~= "" then U.TT:AddLine("<" .. d.sub .. ">", 1, 1, 1) end
+    U.TT:AddLine(d.kind.pl, C.muted[1], C.muted[2], C.muted[3])
     local px, py = playerPos(M.mapID)
     local m, dir
     if px then m, dir = U.mapDistance(M.mapID, px, py, d.x, d.y) end
-    if m then GameTooltip:AddLine(U.fmtDistance(m) .. " na " .. dir, C.muted[1], C.muted[2], C.muted[3]) end
-    GameTooltip:AddLine("LPM: prowadź strzałką", C.faint[1], C.faint[2], C.faint[3])
-    GameTooltip:Show()
+    if m then U.TT:AddLine(U.fmtDistance(m) .. " na " .. dir, C.muted[1], C.muted[2], C.muted[3]) end
+    U.TT:AddLine("LPM: prowadź strzałką", C.faint[1], C.faint[2], C.faint[3])
+    U.TT:Show()
   end)
-  p:SetScript("OnLeave", function() GameTooltip:Hide() end)
+  p:SetScript("OnLeave", function() U.TT:Hide() end)
   p:SetScript("OnClick", function(self) if self.d then guide(self.d.x, self.d.y, self.d.name or self.d.kind.pl) end end)
   M.sp[i] = p
   return p
@@ -423,7 +425,7 @@ local function placeService()
       n = n + 1
       local p = svcPin(n)
       p.d = d
-      p.i:SetTexture(d.kind.icon)
+      p.zn:Set("usluga", { icon = d.kind.icon })
       local show = LABEL_ALWAYS[d.kind.key] or (d.kind.key or ""):find("^prof") or M.z >= 2
       p.t:SetText((show and not d.object) and (d.name or "") or "")
       p:ClearAllPoints()
@@ -444,6 +446,7 @@ local function applyView(redraw)
     placeQuest()
     placeService()
     if U.MAP_placeGather then U.MAP_placeGather() end
+    if U.MAP_placeBuy then pcall(U.MAP_placeBuy) end -- 15.11: kupcy przedmiotu (MapaKupWidok.lua)
   end
   M.zoomT:SetText(M.z > 1.01 and (string.format("x%.1f", M.z):gsub("%.", ",")) or "")
 end
@@ -489,7 +492,15 @@ local function sidebar()
   M.title:SetText(info and info.name or "Mapa")
   local lo, hi = U.call(C_Map.GetMapLevels, id)
   lo, hi = U.num(lo), U.num(hi)
-  M.levels:SetText((lo and hi and hi > 0) and ("Poziomy " .. lo .. "–" .. hi) or "")
+  -- 15.11 (R30 P25): poziom strefy z Polestara, groznosc i strefa sporna, w kolorze trudnosci
+  local zi = U.zoneInfo and U.zoneInfo(id, (lo and hi and hi > 0) and lo or nil, (lo and hi and hi > 0) and hi or nil)
+  if zi and zi.text then
+    M.levels:SetText("Poziomy " .. zi.text)
+    U.Color(M.levels, zi.col or C.muted)
+  else
+    M.levels:SetText((lo and hi and hi > 0) and ("Poziomy " .. lo .. "–" .. hi) or "")
+    U.Color(M.levels, C.muted)
+  end
   M.bind:SetText(GetBindLocation and (GetBindLocation() or "—") or "—")
   if U.mapLegendRefresh then pcall(U.mapLegendRefresh) end
 end

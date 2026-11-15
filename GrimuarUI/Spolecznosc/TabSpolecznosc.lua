@@ -194,33 +194,33 @@ end
 local function rowEnter(self)
   local d = self.d
   if not d then return end
-  GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+  U.TT:SetOwner(self, "ANCHOR_RIGHT")
   local c = d.online and classColor(d.tok) or C.faint
-  GameTooltip:SetText(short(d.name), c[1], c[2], c[3])
+  U.TT:SetText(short(d.name), c[1], c[2], c[3])
   local line = (d.level and ("Poziom " .. d.level .. " ") or "") .. (d.cls or "")
-  if line ~= "" then GameTooltip:AddLine(line, 1, 1, 1) end
-  if d.rank then GameTooltip:AddLine("Ranga: " .. d.rank, 0.75, 0.75, 0.75) end
-  if d.area then GameTooltip:AddLine(d.area, 0.75, 0.75, 0.75) end
-  if d.note then GameTooltip:AddLine(d.note, C.muted[1], C.muted[2], C.muted[3], true) end
+  if line ~= "" then U.TT:AddLine(line, 1, 1, 1) end
+  if d.rank then U.TT:AddLine("Ranga: " .. d.rank, 0.75, 0.75, 0.75) end
+  if d.area then U.TT:AddLine(d.area, 0.75, 0.75, 0.75) end
+  if d.note then U.TT:AddLine(d.note, C.muted[1], C.muted[2], C.muted[3], true) end
   if self.kind == "group" and not d.me and U.groupMemberTip then
-    GameTooltip:AddLine(" ")
-    pcall(U.groupMemberTip, GameTooltip, d.name)
+    U.TT:AddLine(" ")
+    pcall(U.groupMemberTip, U.TT, d.name)
   end
   -- 14.11 (R25 G8): stan znajomego z Grimuarem; (G4) postep znajomego
-  if not d.me and U.peerTip then pcall(U.peerTip, GameTooltip, d.char or d.name) end
+  if not d.me and U.peerTip then pcall(U.peerTip, U.TT, d.char or d.name) end
   if self.kind == "friend" and U.friendProgress then
     local okP, line, tip = pcall(U.friendProgress, d.char or d.name)
     if okP and line then
-      GameTooltip:AddLine(" ")
-      GameTooltip:AddLine("Postęp: " .. line, C.gold[1], C.gold[2], C.gold[3], true)
-      if tip then GameTooltip:AddLine(tip, 0.8, 0.8, 0.8, true) end
+      U.TT:AddLine(" ")
+      U.TT:AddLine("Postęp: " .. line, C.gold[1], C.gold[2], C.gold[3], true)
+      if tip then U.TT:AddLine(tip, 0.8, 0.8, 0.8, true) end
     end
   end
   if not d.me then
-    GameTooltip:AddLine(self.kind == "group" and "LPM: szepnij (zamyka hub) · PPM: prowadź do tej osoby" or "LPM: szepnij (zamyka hub) · PPM: zaproś",
+    U.TT:AddLine(self.kind == "group" and "LPM: szepnij (zamyka hub) · PPM: prowadź do tej osoby" or "LPM: szepnij (zamyka hub) · PPM: zaproś",
       C.faint[1], C.faint[2], C.faint[3])
   end
-  GameTooltip:Show()
+  U.TT:Show()
 end
 local function rowClick(self, btn)
   local d = self.d
@@ -255,7 +255,7 @@ local function row(pool, parent, i)
   r:RegisterForClicks("LeftButtonUp", "RightButtonUp")
   r:SetScript("OnClick", rowClick)
   r:SetScript("OnEnter", rowEnter)
-  r:SetScript("OnLeave", function() GameTooltip:Hide() end)
+  r:SetScript("OnLeave", function() U.TT:Hide() end)
   pool[i] = r
   return r
 end
@@ -430,13 +430,13 @@ local function dungeonRow(i)
   r.tag:SetPoint("TOPRIGHT", 0, -2)
   r:SetScript("OnEnter", function(self)
     if not self.d then return end
-    GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-    GameTooltip:SetText(self.d[3], C.gold[1], C.gold[2], C.gold[3])
-    GameTooltip:AddLine("Poziom " .. self.d[1] .. "–" .. self.d[2], 1, 1, 1)
-    if self.d[4] then GameTooltip:AddLine(self.d[4], 0.8, 0.8, 0.8, true) end
-    GameTooltip:Show()
+    U.TT:SetOwner(self, "ANCHOR_LEFT")
+    U.TT:SetText(self.d[3], C.gold[1], C.gold[2], C.gold[3])
+    U.TT:AddLine("Poziom " .. self.d[1] .. "–" .. self.d[2], 1, 1, 1)
+    if self.d[4] then U.TT:AddLine(self.d[4], 0.8, 0.8, 0.8, true) end
+    U.TT:Show()
   end)
-  r:SetScript("OnLeave", function() GameTooltip:Hide() end)
+  r:SetScript("OnLeave", function() U.TT:Hide() end)
   S.dRows[i] = r
   return r
 end

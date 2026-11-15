@@ -107,7 +107,7 @@ end
 function U.psHereSpots()
   local out = {}
   for _, e in ipairs(hereList() or {}) do
-    if e.map and e.x and e.y then out[#out + 1] = { map = e.map, x = e.x, y = e.y, yards = e.yards } end
+    if e.map and e.x and e.y then out[#out + 1] = { map = e.map, x = e.x, y = e.y, yards = e.yards, text = e.text } end
   end
   return out
 end

@@ -4,20 +4,23 @@
 ## Notes-enUS: Grimuar: settings, builds, step-by-step guidance, guide window, tutorial. Shift+G, /gr
 ## Author: Grimuar
 ## X-License: GPL-3.0
-## Version: 5.9.0
+## Version: 5.10.0
 ## SavedVariables: GrimuarSetupDB
 ## OptionalDeps: Grimuar_Osobiste, Masque, Polestar
 Build\Api.lua
 Locales\Tlumacz.lua
 Locales\enUS.lua
 Locales\enUS_teksty.lua
+Locales\enUS_teksty2.lua
 Locales\enUS_okna.lua
+Locales\enUS_510.lua
 Build\Walidacja.lua
 Build\Kod.lua
 Buildy\Mag_Frost.lua
 Build\Start.lua
 Rdzen\Core.lua
 Rdzen\Style.lua
+Rdzen\Dymek.lua
 Rdzen\Engine.lua
 Prowadzenie\Prowadzenie.lua
 Prowadzenie\Miejsca.lua
@@ -46,6 +49,7 @@ Walka\Klawisze.lua
 Walka\Apteczka.lua
 Wyglad\PlecakRuny.lua
 Wyglad\PlecakPlus.lua
+Wyglad\Porzadki.lua
 Wyglad\Wstegi.lua
 Prowadzenie\Sesja.lua
 Walka\Pomocnik.lua
@@ -61,6 +65,7 @@ Gospodarka\OknoProfesji.lua
 Prowadzenie\Rozwoj.lua
 Wyglad\Plaskie.lua
 Wyglad\LatkaFSS.lua
+Wyglad\Aktualizacje.lua
 Gospodarka\Rynek.lua
 Prowadzenie\Trasa.lua
 Gospodarka\Zloto.lua

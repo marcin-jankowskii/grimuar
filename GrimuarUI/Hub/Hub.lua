@@ -290,7 +290,7 @@ function U.Open(id)
   local was = hub:IsShown()
   hub:Show()
   if not was then sound("IG_CHARACTER_INFO_OPEN", 839) end
-  pcall(GameTooltip.Hide, GameTooltip)
+  pcall(U.TT.Hide, U.TT)
   U.Select(id or db().tab or "grimuar")
   return true
 end
@@ -471,6 +471,9 @@ SlashCmdList.GRIMUARHUB = function(msg)
     db().minimapAvail = db().minimapAvail == false
     say("hub: „!” na minimapie " .. (db().minimapAvail ~= false and "włączone" or "wyłączone") .. ".")
     if U.minimapAvailUpdate then pcall(U.minimapAvailUpdate) end
+  elseif msg == "minimapa zbieranie" then
+    -- 15.11: ziola i ruda Grimuara na minimapie (Mapa\MinimapaZadania.lua)
+    if U.minimapGatherCmd then U.minimapGatherCmd() end
   elseif msg == "cel" then
     if U.hudCmd then U.hudCmd("cel") end
   elseif msg == "cel ramka" then
@@ -491,12 +494,17 @@ SlashCmdList.GRIMUARHUB = function(msg)
     if U.paskiCmd then U.paskiCmd("akcji") end
   elseif msg == "pas" then
     if U.pasCmd then U.pasCmd() end
+  elseif msg == "lot" then
+    -- 15.11 (R30 P26): pasek lotu u gory ekranu (Hud\Lot.lua)
+    if U.lotHudCmd then U.lotHudCmd() end
   elseif msg == "rozmowa" then
     if U.rozmowaCmd then U.rozmowaCmd() end
   elseif msg == "kreator" then
     if U.wizard then U.wizard() end
   elseif msg == "dziel" then
     if U.shareAllQuests then U.shareAllQuests() end
+  elseif msg == "porzadki" or msg == "porządki" then
+    if U.porzadkiToggle then U.porzadkiToggle() end
   elseif msg == "start" then
     if U.startSesji then U.startSesji(true) end
   elseif msg:find("^okna") then

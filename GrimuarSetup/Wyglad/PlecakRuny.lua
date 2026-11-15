@@ -76,6 +76,15 @@ local function importCategories()
       k("KEYWORD_SUBCLASS_FLASK", "flask") .. "|" .. k("KEYWORD_SUBCLASS_SCROLL", "scroll") .. "|scroll|hearthstone",
       "grim_walka", "D8B25A", 1 },
     { "QUESTY", "#" .. quest, "grim_questy", "D8B25A", 3 },
+    -- 15.11 v5 (gracz: „zebym wiecej nie sprzedal przez przypadek pickaxe”): narzedzia profesji po nazwie, przed Sprzetem
+    { "PROFESJE", (function()
+        -- wyszukiwarka Syndicatora: „-” to zakres, wiec nazwy z myslnikiem zostaja tylko w Porzadkach (G.isProfTool)
+        local names = {}
+        for _, n in ipairs(G.PROF_TOOL_NAMES or { "mining pick", "skinning knife", "fishing pole" }) do
+          if not n:find("-", 1, true) then names[#names + 1] = n end
+        end
+        return table.concat(names, "|")
+      end)(), "grim_profesje", "7DC8E0", 3 },
     { "LEPSZY SPRZĘT", k("KEYWORD_UPGRADE", "upgrade"), "grim_lepszy", "4ED86A", 2 },
     { "SPRZĘT", k("KEYWORD_GEAR", "gear"), "grim_sprzet", "D8B25A", 0 },
     { "GOTOWANIE", k("KEYWORD_SUBCLASS_MEAT", "meat") .. "&#" .. trade, "grim_gotowanie", "D8B25A", 1 },
@@ -87,7 +96,7 @@ local function importCategories()
     { "ŚMIECI", k("KEYWORD_JUNK", "junk"), "grim_smieci", "9A917F", 3 },
   }
   local packed = {}
-  for i = 1, 11 do if cats[i] then packed[#packed + 1] = cats[i] end end
+  for i = 1, 12 do if cats[i] then packed[#packed + 1] = cats[i] end end
   cats = packed
   local data = { version = 3, addon = "Baganator", kind = "categories", categories = {}, modifications = {},
     sections = {}, hidden = {}, order = {} }
@@ -95,7 +104,7 @@ local function importCategories()
     data.categories[#data.categories + 1] = { name = c[1], search = c[2], source = c[3] }
     data.modifications[#data.modifications + 1] = { source = c[3], color = c[4], priority = c[5] }
   end
-  for _, src in ipairs({ "grim_walka", "----", "grim_questy", "----", "grim_lepszy", "----", "grim_sprzet", "----",
+  for _, src in ipairs({ "grim_walka", "----", "grim_questy", "----", "grim_profesje", "----", "grim_lepszy", "----", "grim_sprzet", "----",
     "grim_gotowanie", "----", "grim_tkaniny", "----", "grim_ziola", "----", recipe and "grim_receptury" or "----", "----",
     "grim_materialy", "----", "default_other", "----", "grim_smieci", "----", "default_special_empty" }) do
     data.order[#data.order + 1] = src
@@ -364,7 +373,7 @@ G.plecakSetup = setupOnce
 -- v4 dla plecakow ustawionych wczesniej (plecakV 1-3): grupy v4 i znaczki Grimuara (Plecak+, PlecakPlus.lua)
 local function regroup()
   local v = GrimuarSetupDB.plecakV or 0
-  if v < 1 or v >= 4 or InCombatLockdown() then return end
+  if v < 1 or v >= 5 or InCombatLockdown() then return end
   if not (Baganator and Baganator.API and Baganator.API.ImportString) then return end
   pcall(removeOldCategories)
   local ok, err = pcall(importCategories)
@@ -383,8 +392,8 @@ local function regroup()
     if not has then table.insert(bl, 1, "grimuar_need") end
     p.icon_bottom_left_corner_array = bl
   end)
-  GrimuarSetupDB.plecakV = 4
-  say("plecak+: Do walki, Questy, Sprzęt, Gotowanie, Tkaniny, Zioła i ruda, Receptury, Materiały, Inne, Śmieci; ◆ potrzebne, ★ ulubione (Alt+prawy klik), przyciski na dole. Wpisz /reload.")
+  GrimuarSetupDB.plecakV = 5
+  say("plecak+: Do walki, Questy, Profesje (narzędzia), Sprzęt, Gotowanie, Tkaniny, Zioła i ruda, Receptury, Materiały, Inne, Śmieci; ◆ potrzebne, ★ ulubione (Alt+prawy klik), przyciski na dole. Wpisz /reload.")
 end
 G.plecakRegroup = regroup
 -- 14.11: hub (GrimuarUI) przypina plecak w zakladce Postac; ramki plecaka z sluchacza skorek Baganatora

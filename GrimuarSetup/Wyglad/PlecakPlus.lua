@@ -189,7 +189,8 @@ local function depositMaterials()
   pcall(eachBagItem, function(bag, slot, info)
     if n >= 12 then return end
     local _, _, _, _, _, classID = C_Item.GetItemInfoInstant(info.itemID)
-    if classID == (Enum.ItemClass and Enum.ItemClass.Tradegoods or 7) and not needed()[info.itemID] and marks()[info.itemID] ~= "fav" then
+    if classID == (Enum.ItemClass and Enum.ItemClass.Tradegoods or 7) and not needed()[info.itemID] and marks()[info.itemID] ~= "fav"
+      and not (G.isProfTool and G.isProfTool(info.itemID)) then
       pcall(C_Container.UseContainerItem, bag, slot)
       n = n + 1
     end
@@ -262,8 +263,14 @@ function G.plecakBarUpdate()
   bar.dep:SetShown(K.bank)
   bar.comp:SetShown(true)
   bar.hub:SetShown(GrimuarHubOpen ~= nil)
+  -- 15.11 (Porzadki w torbach): ile rzeczy czeka na decyzje
+  if bar.porz then
+    local n = G.porzadkiCount and G.porzadkiCount() or 0
+    bar.porz:SetShown(G.porzadkiToggle ~= nil)
+    bar.porz:SetLabel(n > 0 and ("Porządki (" .. n .. ")") or "Porządki")
+  end
   local x = 0
-  for _, b in ipairs({ bar.sell, bar.dep, bar.comp, bar.hub }) do
+  for _, b in ipairs({ bar.porz, bar.sell, bar.dep, bar.comp, bar.hub }) do
     if b:IsShown() then
       b:ClearAllPoints()
       b:SetPoint("LEFT", bar, "LEFT", x, 0)
@@ -319,6 +326,8 @@ local function register()
     bar.dep:SetLabel("Odłóż materiały")
     bar.comp = barButton("Kompaktuj", compact)
     bar.comp:SetLabel("Kompaktuj")
+    bar.porz = barButton("Porządki", function() if G.porzadkiToggle then G.porzadkiToggle() end end)
+    bar.porz:SetLabel("Porządki")
     bar.hub = barButton("W hubie", function() if GrimuarHubOpen then GrimuarHubOpen("ekwipunek") end end)
     bar.hub:SetLabel("W hubie")
     pcall(A.RegisterRegion, "Grimuar: śmieci, bank, hub", "grimuar_bar", "backpack", "bottom_left", bar)
@@ -346,6 +355,21 @@ local function tooltipLine(tt, data)
   if need then tt:AddLine("|cff7ce07c◆ Grimuar: potrzebne|r " .. need, 0.8, 0.9, 0.75, true) end
   if m == "fav" then tt:AddLine("|cffd8b25a★ Grimuar: ulubione|r (nie trafi do śmieci)", 0.8, 0.8, 0.8, true)
   elseif m == "junk" then tt:AddLine("|cffa0a0a0● Grimuar: śmieć|r (sprzedasz przy kupcu)", 0.8, 0.8, 0.8, true) end
+  -- 15.11 (Porzadki w torbach): co z tym zrobic, gdy przedmiot jest w torbie (dymek z plecaka)
+  if not need and m ~= "fav" and m ~= "junk" and G.itemVerdict and tt.GetOwner then
+    pcall(function()
+      local owner = tt:GetOwner()
+      local bag = owner and owner.GetBagID and owner:GetBagID() or (owner and owner:GetParent() and owner:GetParent().GetID and owner:GetParent():GetID())
+      local slot = owner and owner.GetID and owner:GetID()
+      if not (bag and slot) then return end
+      local info = C_Container.GetContainerItemInfo(bag, slot)
+      if not (type(info) == "table" and info.itemID == id) then return end
+      local v, why = G.itemVerdict(bag, slot, info)
+      local L = { sprzedaj = "sprzedaj u kupca", aukcja = "wystaw na aukcji", uzyj = "użyj albo załóż", bank = "do banku",
+        wyrzuc = "wyrzuć", zostaw = "zostaw", smieci = "śmieć" }
+      if v and v ~= "zostaw" then tt:AddLine("|cffd8b25aGrimuar: " .. (L[v] or v) .. "|r · " .. tostring(why), 0.8, 0.8, 0.75, true) end
+    end)
+  end
 end
 
 local ev = CreateFrame("Frame")

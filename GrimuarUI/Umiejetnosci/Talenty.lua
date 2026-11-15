@@ -254,16 +254,16 @@ local function node(i)
   end)
   n:SetScript("OnEnter", function(self)
     if not self.info then return end
-    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    local shown = self.info.spellID and pcall(GameTooltip.SetSpellByID, GameTooltip, self.info.spellID)
-    if not shown and not pcall(GameTooltip.SetTalent, GameTooltip, self.info.tab, self.info.i) then
-      GameTooltip:SetText(self.info.name)
-      GameTooltip:AddLine("Ranga " .. self.info.rank .. " / " .. self.info.max, 1, 1, 1)
+    U.TT:SetOwner(self, "ANCHOR_RIGHT")
+    local shown = self.info.spellID and pcall(U.TT.SetSpellByID, U.TT, self.info.spellID)
+    if not shown and not pcall(U.TT.SetTalent, U.TT, self.info.tab, self.info.i) then
+      U.TT:SetText(self.info.name)
+      U.TT:AddLine("Ranga " .. self.info.rank .. " / " .. self.info.max, 1, 1, 1)
     end
-    if self.plan then GameTooltip:AddLine("Grimuar: następny punkt według planu", C.gold[1], C.gold[2], C.gold[3]) end
-    GameTooltip:Show()
+    if self.plan then U.TT:AddLine("Grimuar: następny punkt według planu", C.gold[1], C.gold[2], C.gold[3]) end
+    U.TT:Show()
   end)
-  n:SetScript("OnLeave", function() GameTooltip:Hide() end)
+  n:SetScript("OnLeave", function() U.TT:Hide() end)
   S.nodes[i] = n
   return n
 end

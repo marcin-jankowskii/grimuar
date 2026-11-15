@@ -111,21 +111,21 @@ local function makeButton()
   btn:SetScript("OnClick", start)
   btn:SetScript("OnEnter", function(self)
     local buy, skip, cost = plan()
-    GameTooltip:SetOwner(self, "ANCHOR_TOP")
-    GameTooltip:AddLine("Grimuar: kup tylko to, czego Frost używa", 0.85, 0.71, 0.36)
+    G.TT:SetOwner(self, "ANCHOR_TOP")
+    G.TT:AddLine("Grimuar: kup tylko to, czego Frost używa", 0.85, 0.71, 0.36)
     if #buy > 0 then
-      GameTooltip:AddLine("Kupię (" .. coins(cost) .. "):", 0.49, 0.78, 0.55)
-      for _, s in ipairs(buy) do GameTooltip:AddLine("  " .. label(s), 0.93, 0.91, 0.86) end
+      G.TT:AddLine("Kupię (" .. coins(cost) .. "):", 0.49, 0.78, 0.55)
+      for _, s in ipairs(buy) do G.TT:AddLine("  " .. label(s), 0.93, 0.91, 0.86) end
     else
-      GameTooltip:AddLine("Nic do kupienia dla Frosta.", 0.93, 0.91, 0.86)
+      G.TT:AddLine("Nic do kupienia dla Frosta.", 0.93, 0.91, 0.86)
     end
     if #skip > 0 then
-      GameTooltip:AddLine("Pominę:", 0.94, 0.54, 0.44)
-      for _, s in ipairs(skip) do GameTooltip:AddLine("  " .. label(s) .. ": " .. reason(s.name), 0.6, 0.63, 0.69, true) end
+      G.TT:AddLine("Pominę:", 0.94, 0.54, 0.44)
+      for _, s in ipairs(skip) do G.TT:AddLine("  " .. label(s) .. ": " .. reason(s.name), 0.6, 0.63, 0.69, true) end
     end
-    GameTooltip:Show()
+    G.TT:Show()
   end)
-  btn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+  btn:SetScript("OnLeave", function() G.TT:Hide() end)
 end
 
 local ev = CreateFrame("Frame")
@@ -143,7 +143,11 @@ ev:SetScript("OnEvent", function(_, event)
         local names = {}
         for _, s in ipairs(buy) do table.insert(names, label(s)) end
         local msg = (#buy > 0 and ("u trenera kup wg buildu: " .. table.concat(names, ", ") .. " (" .. coins(cost) .. "). Kliknij „Kup wg buildu”.") or "nic nowego dla Twojego buildu.")
-        if #skip > 0 then msg = msg .. " Pomijam " .. #skip .. " (najedź na przycisk). Nie klikaj Train All: kupi wszystko." end
+        if #skip > 0 then
+          msg = msg .. " Pomijam " .. #skip .. " (najedź na przycisk)."
+          -- 15.11: Polestar od 0.3.7.1 nie ma przycisku Train All; ostrzezenie tylko, gdy przycisk jest
+          if _G.PolestarTrainAllButton then msg = msg .. " Nie klikaj Train All: kupi wszystko." end
+        end
         pcall(G.showToast, msg, "train", false)
       end
     end)

@@ -85,6 +85,40 @@ local function applyBinds()
   return n
 end
 
+-- 15.11 (gracz: „nie widze pod Shift+T nic”): klawisze dopisane do buildu (np. Dampen Magic pod Shift+T) dochodzily
+-- tylko przy pelnej konfiguracji albo przez „Napraw” w Kontroli. Teraz po wejsciu i po zmianie buildu Grimuar podpina
+-- brakujace klawisze buildu, ale tylko na wolnych klawiszach (cudzego przypisania nie zmienia), poza walka.
+local function applyMissingBinds()
+  if InCombatLockdown() or not (G.barsAllowed and G.barsAllowed()) then return 0 end
+  local n = 0
+  for _, b in ipairs(BINDS) do
+    local cur = GetBindingAction(b[1])
+    if (cur == nil or cur == "") and GetBindingKey(b[2]) == nil then
+      local ok, res = pcall(SetBinding, b[1], b[2])
+      if ok and res then n = n + 1 end
+    elseif cur ~= b[2] and GetBindingKey(b[2]) == nil and not (GrimuarSetupDB.bindTaken or {})[b[1]] then
+      -- klawisz zajety czym innym: mowimy raz, czym (gracz decyduje: Kontrola > Napraw albo Ustawienia > Klawisze)
+      GrimuarSetupDB.bindTaken = GrimuarSetupDB.bindTaken or {}
+      GrimuarSetupDB.bindTaken[b[1]] = true
+      local what = (_G["BINDING_NAME_" .. tostring(cur)] or tostring(cur))
+      say("klawisz " .. b[1]:gsub("SHIFT%-", "Shift+"):gsub("CTRL%-", "Ctrl+"):gsub("ALT%-", "Alt+") .. " jest zajęty (" .. what ..
+        "), więc go nie ruszam. Kontrola > Napraw albo hub > Ustawienia > Klawisze przypnie go do paska buildu.")
+    end
+  end
+  if n > 0 then
+    pcall(function() SaveBindings(GetCurrentBindingSet()) end)
+    say("nowe klawisze z buildu podpięte: " .. n .. " (tylko wolne klawisze).")
+  end
+  return n
+end
+G.applyMissingBinds = applyMissingBinds
+do
+  local ev = CreateFrame("Frame")
+  ev:RegisterEvent("PLAYER_LOGIN")
+  ev:SetScript("OnEvent", function() C_Timer.After(10, function() pcall(applyMissingBinds) end) end)
+  if G.OnBuildChanged then G.OnBuildChanged(function() C_Timer.After(1, function() pcall(applyMissingBinds) end) end) end
+end
+
 local function showBar3()
   pcall(function() Settings.SetValue("PROXY_SHOW_ACTIONBAR_3", true) end)
   if MultiBarBottomRight and MultiBarBottomRight:IsShown() then return true end
@@ -175,16 +209,33 @@ local function isAvailable(entry)
   return knownSpellId(entry) ~= nil
 end
 
+-- 15.11 (gracz: „kupiony i nic sie nie stalo” - Dampen Magic): gra sama wklada nowo poznany czar w pierwszy wolny
+-- slot, a Grimuar uznawal go wtedy za „juz na paskach” i nie kladl na miejsce z buildu (Shift+T). Liczy sie tylko slot
+-- z planu buildu; zajete miejsce z planu Grimuar zglasza raz na sesje zamiast milczec.
+local function plannedSlotOf(entry)
+  for s = 1, 120 do
+    if (MAIN[s] or BAR2[s] or BAR3[s]) and slotContent(s) == entry then return s end
+  end
+  return nil
+end
+local conflictSaid = {}
 local function placeSlot(slot, cands, placed)
   for i, entry in ipairs(cands) do
     if isAvailable(entry) then
       local cur = HasAction(slot) and slotContent(slot) or nil
       if cur == entry then return end
-      if onBars(entry) then return end
+      if plannedSlotOf(entry) then return end
       if cur then
         local replaceable = false
         for j = i + 1, #cands do if cur == cands[j] then replaceable = true end end
-        if not replaceable then return end
+        if not replaceable then
+          if not conflictSaid[entry] and i == 1 then
+            conflictSaid[entry] = true
+            say(entry:gsub("^macro:", "makro ") .. ": jego miejsce na pasku (slot " .. slot .. ") zajmuje " .. tostring(cur) ..
+              ". Przeciągnij tamto gdzie indziej, a Grimuar położy czar sam.")
+          end
+          return
+        end
       end
       ClearCursor()
       if pickup(entry) then

@@ -9,6 +9,14 @@
 local ADDON, U = ...
 
 U.NOWOSCI_GRIMUAR = {
+  { ver = "0.19 / 5.10", date = "15.11.2026", title = { pl = "Gdzie kupić, nowe okna, aktualizacje", en = "Where to buy, new windows, updates" }, items = {
+    { pl = "Mapa › Kup: wpisz przedmiot albo kliknij skrót (kilof, runy, torby, reagenty): kupcy od najbliższego, znaczniki i „Prowadź”.", en = "Map › Buy: type an item or click a shortcut (pick, runes, bags, reagents): vendors nearest first, pins and Guide." },
+    { pl = "Wyszukiwarka wszystkiego na mapie: postacie, rzadkie, questy, przedmioty, lochy; /npc tak samo.", en = "Search everything on the map: NPCs, rares, quests, items, dungeons; /npc too." },
+    { pl = "Nowe okna: Mistrz lotów i Handel w stylu Grimuara; pasek lotu na ekranie.", en = "New windows: flight master and trade in the Grimuar style; a flight bar on screen." },
+    { pl = "Koło maga: runy i odnowienie teleportów; strefy z poziomem i groźnością; karta starych rang; rzadkie w Księdze i alarm.", en = "Mage wheel: teleport runes and cooldowns; zone levels and danger; old ranks card; rares in the Codex and an alarm." },
+    { pl = "Torby: grupa Profesje, narzędzia (kilof, wędka…) nigdy do sprzedaży; Porządki z jednym klikiem na grupę.", en = "Bags: a Professions group, tools (pick, fishing pole…) never sold; Cleanup with one click per group." },
+    { pl = "Po aktualizacji addonów Grimuar sam sprawdza, czy dalej z nimi działa.", en = "After addon updates Grimuar checks by itself that it still works with them." },
+  } },
   { ver = "0.18 / 5.9", date = "15.11.2026", title = { pl = "Polestar w Grimuarze", en = "Polestar in Grimuar" }, items = {
     { pl = "„Prowadź” przez strzałkę Polestara, z czasem dojścia; po dojściu strzałka sama wraca do przewodnika.", en = "Guide buttons use Polestar's arrow with travel time; the arrow returns to the guide on arrival." },
     { pl = "Poprawka: „Prowadź” z poradników trafia w punkt także na przebudowanych mapach Forever.", en = "Fix: guide targets land on the spot on rebuilt Forever maps too." },

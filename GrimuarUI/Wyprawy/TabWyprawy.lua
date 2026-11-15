@@ -376,6 +376,9 @@ local function paintBanner(d)
   end
 end
 
+-- 15.11 (R30 P29): z wyszukiwarki Mapy (MapaSzukajPolestar.lua): Wyprawy otwarte na tym lochu
+function U.wyprawyShow(key) S.sel = key U.Open("wyprawy") end
+
 function U.wyprawyRefresh()
   if not (S.mid and S.mid:IsVisible()) then return end
   autoRight()

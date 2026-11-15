@@ -205,6 +205,7 @@ local function sourceCard(r)
     end or nil,
   }
 end
+U.psSourceCard = sourceCard -- 15.11 (R30 P29): tez „Skad zdobyc” w wyszukiwarce Mapy (Mapa\MapaSzukajPolestar.lua)
 
 -- „Prowadź po to”: przewodnik Polestara po przedmiot w nowej karcie (tylko na klik gracza)
 function U.psItemGuide(id, name)

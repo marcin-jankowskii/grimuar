@@ -1,5 +1,29 @@
 # Changelog
 
+## GrimuarSetup 5.10.0 · GrimuarUI 0.19.0 (2026-11-15)
+- **Where to buy:** the hub map search has a "Buy" mode: type an item (or click a shortcut: Mining Pick, teleport
+  runes, bags, reagents) and get its vendors nearest first, with zone, distance or travel time, pins on the map and
+  "Guide" by map ID. Vendors come from Polestar's Codex and Questie together (Codex keeps only ten per item).
+- **Search everything:** the map search uses Polestar's search (NPCs, rares, quests, items, dungeons, zones) as cards;
+  items open "Where to get it", `/npc` uses the same search. Questie stays as the fallback.
+- **New windows in the Grimuar style:** flight master (destination cards, Polestar's target first, flight time and
+  stops) and player trade (two columns, accept state, warning when you give something for nothing). A flight bar on
+  screen ("Flight to … m:ss"), flights in the Chronicle.
+- **Mage and zones:** rune count, cooldown and a "Reagents" shortcut on the mage wheel, a reminder when you know a
+  teleport and carry no runes; zone level range and danger (Polestar) in the Codex and on the map; an "Old ranks on
+  bars" card with one-click replace; rares and treasures of a zone in the Codex; a rare alarm with "Guide" when
+  Polestar's own card is not shown.
+- **Bags:** a "Professions" group for profession tools (Mining Pick, fishing poles, skinning knife…); tools are never
+  sold, listed or banked. Bag cleanup: a verdict on every item and one click per group.
+- **Addon updates:** Grimuar runs its self-test after any integrated addon changes version and says what changed.
+  Polestar 0.3.7.1 removed Train All: the Check page no longer asks for that option.
+- **Compass and minimap markers** redesigned (textures, hover tooltip on the compass), Grimuar herb and ore icons on the
+  minimap stay under the game's tracking dots; collapse buttons on the Combo and Professions panels; "Now" card steps
+  ‹ 1 / 4 ›; Grimuar tooltips with Polish letters.
+- Mage build: Dampen Magic on bar 3 (Shift+T) with PvP tips; missing build keys bind themselves (free keys only); key
+  labels on the quick belt; Comprehend Scroll on Ctrl+C.
+- English strings for all of the above; the English dictionary split in two files.
+
 ## GrimuarSetup 5.9.0 · GrimuarUI 0.18.0 (2026-11-15)
 Polestar integration, research R30 (read-only, every call guarded; without Polestar Grimuar works as before).
 - **Foundation:** "Guide" buttons use Polestar's public arrow API (`Polestar.Nav.API`): no `/way`, no TomTom option,

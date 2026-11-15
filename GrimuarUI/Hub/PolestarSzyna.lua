@@ -14,7 +14,9 @@ local MSGS = { "STEP_CHANGED", "STEP_UPDATED", "WAYPOINT_CHANGED", "NAV_ARRIVED"
   "QUESTDB_LOADED", "CODEX_LOADED", "ITEMDB_LOADED", "GEAR_UPDATED", "PINS_CHANGED", "QOL_XP_UPDATED", "RIDING_DUE",
   "CLASS_QUEST_READY",
   -- 15.11 (R30 etap 3): nowe lub odswiezone przewodniki (questy klasowe P11)
-  "GUIDES_REGISTERED" }
+  "GUIDES_REGISTERED",
+  -- 15.11 (R30 P32/P33): rzadkie (alarm Hud\AlarmRzadki.lua, Ksiega\KsiegaRzadkie.lua)
+  "RARE_SPOTTED", "RARES_HISTORY" }
 
 local S = { subs = {}, dirty = {}, args = {}, queued = false, handles = {}, n = 0 }
 

@@ -336,12 +336,12 @@ local function slotBtn(di, i)
     end)
   end)
   s:SetScript("OnEnter", function(self)
-    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    GameTooltip:SetText(self.tip or "pusty", 1, 1, 1)
-    GameTooltip:AddLine("Klik: wybierz czar albo makro. Prawy klik: wyczyść.", 0.7, 0.7, 0.7, true)
-    GameTooltip:Show()
+    U.TT:SetOwner(self, "ANCHOR_RIGHT")
+    U.TT:SetText(self.tip or "pusty", 1, 1, 1)
+    U.TT:AddLine("Klik: wybierz czar albo makro. Prawy klik: wyczyść.", 0.7, 0.7, 0.7, true)
+    U.TT:Show()
   end)
-  s:SetScript("OnLeave", function() GameTooltip:Hide() end)
+  s:SetScript("OnLeave", function() U.TT:Hide() end)
   PS.slots[key] = s
   return s
 end

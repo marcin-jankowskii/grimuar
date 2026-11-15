@@ -6,7 +6,7 @@
 local ADDON_NAME, G = ...
 
 G.RegisterBuild({
-  schema = 1, id = "grimuar/mage-frost-leveling", version = 1, updated = "2026-11-14",
+  schema = 1, id = "grimuar/mage-frost-leveling", version = 2, updated = "2026-11-15",
   name = { pl = "Mag Frost: levelowanie i PvP", en = "Frost Mage: leveling and PvP" },
   desc = { pl = "Frost przez całe 1–60: Frostbolt z dystansu, Nova i kite, Ice Lance w zamrożone cele. Plan talentów Icy Veins Forever.",
     en = "Frost for all of 1–60: Frostbolt from range, Nova and kite, Ice Lance on frozen targets. Talent plan: Icy Veins Forever." },
@@ -37,6 +37,10 @@ G.RegisterBuild({
   { "SHIFT-Q", "MULTIACTIONBAR1BUTTON9" }, { "SHIFT-E", "MULTIACTIONBAR1BUTTON10" },
   { "SHIFT-F", "MULTIACTIONBAR1BUTTON11" }, { "SHIFT-R", "MULTIACTIONBAR1BUTTON12" },
   { "SHIFT-X", "MULTIACTIONBAR2BUTTON10" },
+  -- 15.11 (gracz: „jak horda zaatakuje, to sie przyda; powinno to byc gdzies w slotach przygotowane”): Dampen Magic
+  { "SHIFT-T", "MULTIACTIONBAR2BUTTON5" },
+  -- 15.11 (gracz: „comprehend scroll tez pod zadnym przyciskiem”): Comprehend Scroll (slot 56)
+  { "CTRL-C", "MULTIACTIONBAR2BUTTON8" },
 },
   bars = {
     main = {
@@ -70,7 +74,7 @@ G.RegisterBuild({
   [50] = { "Teleport: Ironforge" },
   [51] = { "Teleport: Stormwind" },
   [52] = { "Fire Ward" },
-  [53] = { "Frost Ward" },
+  [53] = { "Dampen Magic", "Frost Ward" }, -- 15.11: PvP na serwerze PvP (Shift+T), Frost Ward gdy jeszcze go nie masz
   [54] = { "Frostfire Bolt" },
   [55] = { "Flamestrike" },
   [56] = { "Comprehend Scroll" },
@@ -94,7 +98,7 @@ G.RegisterBuild({
   { 8, "Arcane Missiles", "pomiń, Frost go nie używa" },
   { 10, "Frost Nova", "zamraża wszystko wokół (klawisz Q)" },
   { 12, "Slow Fall", "opcjonalnie: ratuje przed śmiercią z upadku" },
-  { 12, "Dampen Magic", "pomiń przy levelowaniu" },
+  { 12, "Dampen Magic", "kup: na Hordę rzucającą czary (czarnoksiężnik, kapłan, mag), Shift+T; nie trzymaj przy bandażu (osłabia leczenie)" },
   { 14, "Arcane Explosion", "tylko pod AoE (klawisz 5)" },
   { 16, "Flamestrike", "tylko pod AoE" },
   { 18, "Remove Lesser Curse", "zdejmuje klątwy (klawisz =)" },
@@ -152,7 +156,7 @@ G.RegisterBuild({
 },
     aoe = { ["Blizzard"] = true, ["Arcane Explosion"] = true, ["Flamestrike"] = true, ["Mana Shield"] = true },
     skip = {
-  ["Amplify Magic"] = "bezużyteczne przy levelowaniu", ["Dampen Magic"] = "bezużyteczne przy levelowaniu",
+  ["Amplify Magic"] = "bezużyteczne przy levelowaniu", 
   ["Fire Ward"] = "rangi niepotrzebne", ["Frost Ward"] = "rangi niepotrzebne", ["Arcane Missiles"] = "Frost go nie używa",
   ["Scorch"] = "Frost go nie używa", ["Fireball"] = "wystarczy ranga 1 (dłuższy zasięg na zaczepienie)",
   ["Slow Fall"] = "opcjonalne, kup sam, gdy chcesz", ["Remove Lesser Curse"] = "opcjonalne, kup sam, gdy chcesz",
@@ -226,16 +230,16 @@ G.RegisterBuild({
   HUNTER = "Łowca: Nova nie zatrzymuje strzałów. Wejdź za przeszkodę albo blisko niego, owca (R) na zwierzaka.",
   SHAMAN = "Szaman: Counterspell (F) na Lava Burst albo leczenie, Escape Artist (T) na Earthbind.",
   DRUID = "Druid: zmiana formy zdejmuje zamrożenie. Counterspell (F) na leczenie, nie marnuj Novy.",
-  PRIEST = "Kapłan: Counterspell (F) na leczenie, Blink (E) trzymaj na Psychic Scream.",
-  WARLOCK = "Czarnoksiężnik to najtrudniejszy rywal: Counterspell (F) na Fear albo Shadow Bolt i zabij zwierzaka. Często lepiej odejść.",
+  PRIEST = "Kapłan: Dampen Magic (Shift+T) przed walką, Counterspell (F) na leczenie, Blink (E) trzymaj na Psychic Scream.",
+  WARLOCK = "Czarnoksiężnik to najtrudniejszy rywal: Dampen Magic (Shift+T) osłabia każdy tik jego klątw; Counterspell (F) na Fear albo Shadow Bolt i zabij zwierzaka. Często lepiej odejść.",
   MAGE = "Mag: kto pierwszy zamrozi, ten wygrywa. Counterspell (F) na jego owcę, Blink (E) trzymaj na ucieczkę.",
 },
     [40] = {
   WARRIOR = "Wojownik: trzymaj dystans (Frostbolt, Nova, Cone of Cold), Blink (E) po Charge, Escape Artist (T) na Hamstring. Wypił Free Action: owca (R) i odejdź.",
   ROGUE = "Łotrzyk: tarcza (Shift+Q) zanim wyjdzie z ukrycia, na Kidney Shot Ice Block (Shift+E), potem Nova, Blink, Frostbolt i Ice Lance.",
   HUNTER = "Łowca: owca (R) na zwierzaka, walcz blisko albo za przeszkodą. Viper Sting zjada manę, więc kończ szybko.",
-  WARLOCK = "Czarnoksiężnik: Counterspell (F) na Fear albo Shadow Bolt. Felhunter zjada buffy, długą walkę przegrasz: odpuść albo zabij szybko.",
-  PRIEST = "Kapłan: Counterspell (F) na leczenie, trzymaj się dalej niż 8 m (Psychic Scream). Shadow: szybki burst z Shatter.",
+  WARLOCK = "Czarnoksiężnik: Dampen Magic (Shift+T) na jego DoT-y, Counterspell (F) na Fear albo Shadow Bolt. Felhunter zjada buffy, długą walkę przegrasz: odpuść albo zabij szybko.",
+  PRIEST = "Kapłan: Dampen Magic (Shift+T) na Shadow Word: Pain, Counterspell (F) na leczenie, trzymaj się dalej niż 8 m (Psychic Scream). Shadow: szybki burst z Shatter.",
   DRUID = "Druid: zmiana formy zdejmuje Novę. Counterspell (F) na leczenie, owca (R), gdy jest w formie castera.",
   PALADIN = "Paladyn: po Blessing of Freedom nie marnuj Novy, odejdź. Na bańkę czekaj, trzymaj się dalej niż 10 m (Hammer of Justice).",
   SHAMAN = "Szaman: Grounding Totem łapie jeden czar, więc najpierw tani. Escape Artist (T) na Earthbind, Counterspell (F) na leczenie.",

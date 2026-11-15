@@ -84,10 +84,58 @@ local function stepsText(n)
   return "za " .. n .. " " .. plural(n, "krok", "kroki", "kroków")
 end
 
--- karty: { spells?, trainer? } w formacie p:Cards; opts.here: imie trenera, przy ktorym stoisz (bez karty „najblizszy”)
+-- 15.11 (R30 P45, gracz: „stare rangi czarow na paskach”): czary w starszej randze na paskach z
+-- Polestar.QoL.Spells.OldRanks() (QoL\Spells.lua: { { id, bestId, name, have, best, slots } }, liczba przyciskow).
+-- Klik: Spells.Upgrade() podmienia na najwyzsza range (poza walka; w walce Polestar czeka do jej konca).
+-- Polestar ma tez wlasna karte OLD_RANKS (powiadomienie po treningu); nasza to stala lista w Umiejetnosciach i u trenera.
+K.rows = setmetatable({}, { __mode = "k" })
+local function redrawRows()
+  for row in pairs(K.rows) do
+    if row:IsVisible() and row.lastW then pcall(row.Draw, row, row.lastW, row.lastOpts) end
+  end
+end
+local function oldRanksCard()
+  local P = PS()
+  local Sp = P and P.QoL and P.QoL.Spells
+  if not (Sp and type(Sp.OldRanks) == "function") then return nil end
+  local ok, list, n = pcall(Sp.OldRanks)
+  if not ok or type(list) ~= "table" or #list == 0 then return nil end
+  n = U.num(n) or #list
+  local names, tip = {}, { "Na paskach są starsze rangi czarów:" }
+  for i, e in ipairs(list) do
+    local nm = e.name or spellName(e.id) or "?"
+    local ns = #(e.slots or {})
+    if i <= 2 then names[#names + 1] = nm .. " " .. tostring(e.have) .. " → " .. tostring(e.best) end
+    tip[#tip + 1] = "• " .. nm .. ": na pasku ranga " .. tostring(e.have) .. ", znasz " .. tostring(e.best) ..
+      " (" .. ns .. " " .. plural(ns, "przycisk", "przyciski", "przycisków") .. ")"
+  end
+  if #list > 2 then names[#names + 1] = "…" end
+  tip[#tip + 1] = "\nStarsza ranga zadaje mniej obrażeń za prawie tę samą manę."
+  tip[#tip + 1] = "Klik: podmień wszystkie na najwyższą rangę (Polestar; w walce poczeka do jej końca)."
+  return {
+    title = "Stare rangi na paskach: " .. n, sub = table.concat(names, ", "),
+    icon = spellIcon(list[1].bestId or list[1].id) or TRAIN_ICON, col = C.gold,
+    right = "Podmień", rightCol = C.gold, tip = table.concat(tip, "\n"),
+    onClick = function()
+      local okU, r = pcall(Sp.Upgrade)
+      if not okU then
+        U.say("nie udało się podmienić rang: " .. tostring(r))
+      elseif type(r) == "number" then
+        U.say("podmienione przyciski: " .. r .. ".")
+      else
+        U.say("podmienię rangi po walce.")
+      end
+      C_Timer.After(1, redrawRows)
+    end,
+  }
+end
+
+-- karty: { oldRanks?, spells?, trainer? } w formacie p:Cards; opts.here: imie trenera, przy ktorym stoisz (bez karty „najblizszy”)
 function U.psTrainCards(opts)
   local d = U.psTraining()
   local out = {}
+  local okO, old = pcall(oldRanksCard)
+  if okO and old then out[#out + 1] = old end
   if not d.ok then return out end
   local nx = d.next
   if nx then
@@ -143,7 +191,9 @@ function U.psTrainRow(parent)
   local row = CreateFrame("Frame", nil, parent)
   row:SetSize(10, 10)
   row.cards = {}
+  K.rows[row] = true
   function row:Draw(w, opts)
+    self.lastW, self.lastOpts = w, opts
     local ok, list = pcall(U.psTrainCards, opts)
     if not ok or type(list) ~= "table" or #list == 0 then
       if not ok and U.logError then U.logError("trener/karty", list) end
@@ -180,6 +230,17 @@ ev:SetScript("OnEvent", function() K.at = -100 end)
 
 -- ---------- /gr test ----------
 U.testChecksExtra = U.testChecksExtra or {}
+table.insert(U.testChecksExtra, { "Polestar: stare rangi na paskach (Spells.OldRanks, P45)", function()
+  local P = PS()
+  if type(P) ~= "table" then return "brak Polestara (karta rang się nie pokaże)" end
+  local Sp = P.QoL and P.QoL.Spells
+  if not (Sp and type(Sp.OldRanks) == "function" and type(Sp.Upgrade) == "function") then
+    error("brak Polestar.QoL.Spells.OldRanks/Upgrade (QoL\\Spells.lua)")
+  end
+  local ok, list, n = pcall(Sp.OldRanks)
+  if not ok then error("OldRanks: " .. tostring(list)) end
+  return (type(list) == "table" and #list or 0) .. " czarów w starej randze, przycisków: " .. tostring(n or 0)
+end })
 table.insert(U.testChecksExtra, { "Polestar: czary na poziom (Spells.NewAt)", function()
   local P = PS()
   if type(P) ~= "table" then return "brak Polestara (karta czarów się nie pokaże)" end

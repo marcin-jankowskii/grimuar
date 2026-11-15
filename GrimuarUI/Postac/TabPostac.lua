@@ -118,12 +118,12 @@ local function makeSlot(parent, name, size)
   s:SetScript("OnDragStart", function(self) if not InCombatLockdown() then pcall(PickupInventoryItem, self.id) end end)
   s:SetScript("OnReceiveDrag", function(self) if CursorHasItem() and not InCombatLockdown() then pcall(EquipCursorItem, self.id) end end)
   s:SetScript("OnEnter", function(self)
-    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    if GetInventoryItemTexture("player", self.id) then pcall(GameTooltip.SetInventoryItem, GameTooltip, "player", self.id)
-    else GameTooltip:SetText(self.pl, 1, 1, 1) if self.hint then GameTooltip:AddLine(self.hint, 0.94, 0.54, 0.44, true) end end
-    GameTooltip:Show()
+    U.TT:SetOwner(self, "ANCHOR_RIGHT")
+    if GetInventoryItemTexture("player", self.id) then pcall(U.TT.SetInventoryItem, U.TT, "player", self.id)
+    else U.TT:SetText(self.pl, 1, 1, 1) if self.hint then U.TT:AddLine(self.hint, 0.94, 0.54, 0.44, true) end end
+    U.TT:Show()
   end)
-  s:SetScript("OnLeave", function() GameTooltip:Hide() end)
+  s:SetScript("OnLeave", function() U.TT:Hide() end)
   slots[#slots + 1] = s
   return s
 end
@@ -240,14 +240,14 @@ local function build(page)
     b:SetPoint("TOPLEFT", th, "BOTTOMLEFT", (i - 1) * 36, -10)
     b.bag = i
     b:SetScript("OnEnter", function(self)
-      GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+      U.TT:SetOwner(self, "ANCHOR_RIGHT")
       local inv = (C_Container and C_Container.ContainerIDToInventoryID and C_Container.ContainerIDToInventoryID(self.bag))
         or (ContainerIDToInventoryID and ContainerIDToInventoryID(self.bag))
-      if inv and GetInventoryItemTexture("player", inv) then pcall(GameTooltip.SetInventoryItem, GameTooltip, "player", inv)
-      else GameTooltip:SetText("Puste miejsce na torbę", 1, 1, 1) GameTooltip:AddLine("Torby: kupiec (Small Brown Pouch) albo dom aukcyjny.", 0.64, 0.61, 0.55, true) end
-      GameTooltip:Show()
+      if inv and GetInventoryItemTexture("player", inv) then pcall(U.TT.SetInventoryItem, U.TT, "player", inv)
+      else U.TT:SetText("Puste miejsce na torbę", 1, 1, 1) U.TT:AddLine("Torby: kupiec (Small Brown Pouch) albo dom aukcyjny.", 0.64, 0.61, 0.55, true) end
+      U.TT:Show()
     end)
-    b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    b:SetScript("OnLeave", function() U.TT:Hide() end)
     S.bagSlots[i] = b
   end
   S.bagTag = U.Tag(R, "")

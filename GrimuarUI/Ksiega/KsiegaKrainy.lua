@@ -81,3 +81,63 @@ function U.realmsBook()
   return list
 end
 function U.realmsReset() K.list = nil end
+
+-- 15.11 (R30 P25, gracz: „strefy i groznosc”): poziom strefy z Polestara (Maps.GetZoneLevels), kolor trudnosci jak
+-- w Polestarze (Maps.LevelColor) i mnoznik groznosci jego trasy (Nav.danger.Mult: 3 = grozna, 20 = za wysoka).
+-- Bez Polestara: poziomy zadan z Questie (fallback). Strefa sporna tylko dla strefy, w ktorej jestes (C_PvP).
+local ZCOL = { danger = { 0.95, 0.38, 0.32 }, warning = { 0.95, 0.62, 0.28 }, quest = { 0.85, 0.71, 0.36 },
+  success = { 0.48, 0.80, 0.45 }, textMuted = { 0.55, 0.52, 0.48 }, textDim = { 0.55, 0.52, 0.48 } }
+local function levelColor(lo, hi, lvl)
+  if not (lo and hi and lvl) then return "textDim" end
+  if lvl < lo - 2 then return "danger" end
+  if lvl < lo then return "warning" end
+  if lvl <= hi then return "quest" end
+  if lvl <= hi + 5 then return "success" end
+  return "textMuted"
+end
+function U.zoneInfo(ui, fbMin, fbMax)
+  local P = _G.Polestar
+  local lvl = UnitLevel("player") or 1
+  local lo, hi, src
+  if ui and P and P.Maps and P.Maps.GetZoneLevels then
+    local ok, a, b = pcall(P.Maps.GetZoneLevels, ui)
+    if ok and type(a) == "number" then lo, hi, src = a, b, "polestar" end
+  end
+  if not lo and fbMin then lo, hi, src = fbMin, fbMax or fbMin, "questy" end
+  local key = "textDim"
+  if lo and hi then
+    local ok, k = false, nil
+    if P and P.Maps and P.Maps.LevelColor then ok, k = pcall(P.Maps.LevelColor, lo, hi, lvl) end
+    key = (ok and ZCOL[k] and k) or levelColor(lo, hi, lvl)
+  end
+  local mult = 1
+  local D = P and P.Nav and P.Nav.danger
+  if ui and D and D.Mult then
+    local ok, m = pcall(D.Mult, lvl, ui)
+    if ok and type(m) == "number" then mult = m end
+  elseif lo and lo >= lvl + 3 then
+    mult = 3
+  end
+  local word = mult >= 20 and "za wysoka" or (mult >= 3 and "groźna" or nil)
+  if not word and key == "success" then word = "łatwa" elseif not word and key == "textMuted" then word = "za niska" end
+  local pvp
+  if ui and ui == U.call(C_Map.GetBestMapForUnit, "player") then
+    local pt = (C_PvP and C_PvP.GetZonePVPInfo and U.call(C_PvP.GetZonePVPInfo)) or U.call(GetZonePVPInfo)
+    pvp = (pt == "contested" and "sporna") or (pt == "hostile" and "wroga") or (pt == "sanctuary" and "bezpieczna") or nil
+  end
+  -- slowa po angielsku przy jezyku huba en (G.tr bez zmian przy polskim)
+  local tr = U.G and U.G.tr
+  if tr then word = word and tr(word) pvp = pvp and tr(pvp) end
+  return { min = lo, max = hi, src = src, key = key, col = ZCOL[key], mult = mult, word = word, pvp = pvp,
+    text = lo and ((lo == hi and tostring(lo) or (lo .. "–" .. hi)) .. (word and (" · " .. word) or "") .. (pvp and (" · " .. pvp) or "")) or nil }
+end
+U.testChecksExtra = U.testChecksExtra or {}
+table.insert(U.testChecksExtra, { "Strefy: poziom i groźność (P25, Maps.GetZoneLevels, Nav.danger.Mult)", function()
+  local ui = U.call(C_Map.GetBestMapForUnit, "player")
+  local z = U.zoneInfo(ui)
+  if not z.min then
+    if _G.Polestar and _G.Polestar.Maps and _G.Polestar.Maps.GetZoneLevels then return "brak poziomów dla tej strefy (miasto?)" end
+    error("Polestar.Maps.GetZoneLevels niedostępne")
+  end
+  return (z.text or "?") .. " (" .. z.src .. ", ×" .. z.mult .. ")"
+end })

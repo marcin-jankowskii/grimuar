@@ -290,11 +290,11 @@ local function cell(i)
   c:SetScript("OnDragStart", function(self) if self.s then pickup(self.s.id) end end)
   c:SetScript("OnEnter", function(self)
     if not self.s then return end
-    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    if not pcall(GameTooltip.SetSpellByID, GameTooltip, self.s.id) then GameTooltip:SetText(self.s.name) end
-    GameTooltip:Show()
+    U.TT:SetOwner(self, "ANCHOR_RIGHT")
+    if not pcall(U.TT.SetSpellByID, U.TT, self.s.id) then U.TT:SetText(self.s.name) end
+    U.TT:Show()
   end)
-  c:SetScript("OnLeave", function() GameTooltip:Hide() end)
+  c:SetScript("OnLeave", function() U.TT:Hide() end)
   S.cells[i] = c
   return c
 end

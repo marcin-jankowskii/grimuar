@@ -50,6 +50,12 @@ Automatycznie: `/gr test` (moduły GrimuarSetup) i `/hub test` (wszystkie zakła
 | Hub > PvP: kafelki, pola bitew, po BG wpis w „Ostatnie mecze” | | | | | |
 | Po wejściu: karta „Ile masz czasu?”, wybór czasu = plan na pasku i w kartach; `/hub start` | | | | | |
 | `/gr jezyk en`: nowe okna po angielsku | | | | | |
+| 5.10/0.19 `/gr test` i `/hub test`: nowe wpisy (okno lotów, pasek lotu, okno handlu, koło maga, strefy, stare rangi, wyszukiwarka, rzadkie, alarm, Gdzie kupić) bez błędów | | | | | |
+| Mapa › Kup: skrót „Kilof”, lista kupców od najbliższego, znaczniki, klik prowadzi do właściwej strefy | | | | | |
+| Mistrz lotów: okno Grimuara przykrywa mapę lotów, klik w kartę leci; w locie pasek „Lot do …” | | | | | |
+| Handel: przedmioty i stan akceptacji obu stron, Akceptuj, ostrzeżenie przy oddaniu za nic | | | | | |
+| Torby: grupa Profesje (kilof), Porządki nie sprzedają narzędzi | | | | | |
+| Koło maga: liczba run i odnowienie teleportu; Księga › Krainy: poziom strefy, rzadkie z łupami | | | | | |
 | 5.9/0.18 `/gr test`: „UI: Polestar” (wersja, API strzałki v1, zdarzenia słuchane) i testy funkcji Polestara bez błędów | | | | | |
 | „Prowadź” (Dziennik, trener, sprzedawca): strzałka Polestara, czas „~N min”, po dojściu wraca do przewodnika | | | | | |
 | Kompas: czas obok odległości celu; niebieskie romby „Przy okazji”; nie znika po walce | | | | | |

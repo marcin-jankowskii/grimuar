@@ -146,12 +146,14 @@ local OPTS = {
   { "Leatrix_Plus", lea, "RestoreChatMessages", "On", "czat zostaje po /reload", leatrixNoSave },
   -- 15.11 (R30 P02): ps = sekcja ustawien Polestara; odczyt Polestar.Get, zapis Polestar.Set (dziala bez /reload)
   { "Polestar", function() return polestar("qol") end, "deathHelper", false, "duch: strzałka do ciała z Grimuara, nie do Spirit Healera", ps = "qol" },
-  { "Polestar", function() return polestar("qol") end, "trainAllButton", false, "bez przycisku Train All (kupuj przez Kup dla Frosta)", ps = "qol" },
+  -- 15.11: Polestar 0.3.7.1 usunal przycisk Train All i nauke u trenera (opcja qol.trainAllButton juz nie istnieje)
   { "Polestar", function() return polestar("qol") end, "questTooltips", false, "dymki questów tylko z Questie (bez dubli)", ps = "qol" },
   { "Polestar", function() return polestar("qol") end, "sellJunk", false, "śmieci sprzedaje Leatrix (bez dubla)", ps = "qol" },
   { "Polestar", function() return polestar("qol") end, "autoRepair", false, "naprawia Leatrix (bez dubla)", ps = "qol" },
   { "Polestar", function() return polestar("qol") end, "fastLoot", false, "szybkie łupy bez dubla", ps = "qol" },
   { "Polestar", function() return polestar("qol") end, "skipGossip", false, "rozmowy z NPC bez dubla", ps = "qol" },
+  -- 15.11 (gracz: lista celow przeswituje spod okna Polestara): lista celow gry schowana (Polestar QoL\Toggles.lua)
+  { "Polestar", function() return polestar("qol") end, "hideQuestTracker", true, "lista celów gry schowana (questy w oknie Polestara i w Dzienniku)", ps = "qol" },
   -- 15.11 (R30 etap 3, decyzja Q7 „Grimuar pokazuje, w Polestarze wylaczam”): karta „loch otwarty, zbierz questy”
   -- (UI\DungeonToast.lua) dubluje Wyprawy Grimuara (P46). Opcja wylacza tylko te karte: dane lochow, PickupPlan i PickUp
   -- dzialaja dalej (Dungeons.IsEnabled to dungeons.enabled). Czarow na poziom (qol.levelUpSpells -> LEVELUP_SPELLS),
@@ -200,7 +202,10 @@ local function addonOptions(bad, good)
     if addonState(o[1]) then
       local okT, t = pcall(o[2])
       -- 15.11 (R30 P02): opcje Polestara czytane przez Polestar.Get (wartosc domyslna nie lezy w zapisie)
-      local cur = okT and type(t) == "table" and t[o[3]] or nil
+      -- 15.11 (gracz: „i to nie znika”): bez „a and b or nil”, bo wartosc false dawala nil i opcje „wylaczone”
+      -- (Questie trackerEnabled, ForeverCast, BBP) zawsze wychodzily jako inne niz w Grimuarze
+      local cur
+      if okT and type(t) == "table" then cur = t[o[3]] end
       if o.ps and Polestar and Polestar.Get then
         local okG, v = pcall(Polestar.Get, o.ps .. "." .. o[3])
         if okG then cur, okT, t = v, true, t or {} end
@@ -537,3 +542,44 @@ G.auditOpen = open
 G.auditNeedsReload = function() return needReload end
 G.setupSteps = setupSteps
 G.audit = function() return refreshAudit(true) end
+
+-- 15.11 (gracz: lista questow Questie przeswituje spod okna przewodnika Polestara; wybor „schowaj liste Questie”):
+-- raz i od razu, bez /reload (QuestieTracker:Toggle chowa liste w biezacej sesji). Questie zostaje do znacznikow
+-- na mapie i dymkow; questy sa w oknie Polestara i w Dzienniku huba (J). Wlaczenie z powrotem: opcje Questie > Tracker,
+-- Grimuar drugi raz jej nie przestawia (GrimuarSetupDB.questieTrackerV).
+local qtEv = CreateFrame("Frame")
+qtEv:RegisterEvent("PLAYER_LOGIN")
+qtEv:SetScript("OnEvent", function()
+  C_Timer.After(8, function()
+    if InCombatLockdown() then return end
+    -- lista celow samej gry („All Objectives”, „Quests”) widoczna, gdy Questie nie ma swojej: chowa ja opcja Polestara
+    -- qol.hideQuestTracker (QoL\Toggles.lua, dziala od razu przez Polestar.Set); raz, potem decyduje Kontrola
+    if GrimuarSetupDB.gameTrackerV ~= 1 and Polestar and Polestar.Get and Polestar.Set then
+      GrimuarSetupDB.gameTrackerV = 1
+      local okG, v = pcall(Polestar.Get, "qol.hideQuestTracker")
+      if okG and v ~= true and pcall(Polestar.Set, "qol.hideQuestTracker", true) then
+        G.say("lista celów gry schowana (opcja Polestara): questy masz w oknie Polestara i w Dzienniku (J).")
+      end
+    end
+    -- 15.11 (gracz: „wylacz kolka GatherMate2”): kolka GatherMate2 na minimapie wylaczone raz, od razu (jego opcja
+    -- „Show Minimap Icons” + komunikat GatherMate2ConfigChanged, jak jego przycisk); zamiast nich ziola i ruda Grimuara
+    -- (GrimuarUI Mapa\MinimapaZadania.lua). Mapa swiata GatherMate2 bez zmian; wlaczenie z powrotem w GatherMate2.
+    if GrimuarSetupDB.gm2MinimapV ~= 1 and GatherMate2 and GatherMate2.db and GatherMate2.db.profile then
+      GrimuarSetupDB.gm2MinimapV = 1
+      if GatherMate2.db.profile.showMinimap ~= false then
+        GatherMate2.db.profile.showMinimap = false
+        pcall(GatherMate2.SendMessage, GatherMate2, "GatherMate2ConfigChanged")
+        G.say("kółka GatherMate2 na minimapie wyłączone: zioła i ruda pokazuje teraz Grimuar. Mapa świata bez zmian.")
+      end
+    end
+    if GrimuarSetupDB.questieTrackerV == 1 then return end
+    pcall(function()
+      if not (Questie and Questie.db and Questie.db.profile) then return end
+      GrimuarSetupDB.questieTrackerV = 1
+      if not Questie.db.profile.trackerEnabled then return end
+      local T = QuestieLoader and QuestieLoader.ImportModule and QuestieLoader:ImportModule("QuestieTracker")
+      if T and T.Toggle then T:Toggle() else Questie.db.profile.trackerEnabled = false end
+      G.say("lista questów Questie schowana: questy masz w oknie Polestara i w Dzienniku (J). Znaczniki Questie zostają.")
+    end)
+  end)
+end)

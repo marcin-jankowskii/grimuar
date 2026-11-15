@@ -10,6 +10,10 @@
 -- i w lochu zostaje (bez kierunku z gry jest przezroczysty); /hub kompas walka chowa go w walce.
 -- Pasek tempa Grimuara (GrimuarHUD), jesli go nie przesuwales, schodzi pod kompas.
 -- Tylko wlasne ramki, bez myszy (nie lapie klikniec). /hub kompas wlacza i wylacza, /hub kompas walka: chowanie w walce.
+-- 15.11 (makieta „Znaczniki Grimuara”, gracz: „te na kompasie sa brzydkie” → „super, dodaj”): znaczniki z tekstur
+-- (Hub\Znaczniki.lua): cel = zlota runa, cel zadania = romb w kolorze zadania ze znakiem czynnosci (Questie
+-- objective.Type), „?” w medalionie, ziolo i ruda jako ikony, „Przy okazji” niebieski romb z plusem; blizsze wieksze,
+-- dalsze mniejsze i bledsze; odleglosc w pigulce pod celem; cel za plecami na brzegu ze strzalka; kierunki posrednie.
 local ADDON, U = ...
 local C = U.C
 
@@ -18,6 +22,7 @@ local PXR = 160 / (math.pi / 2)          -- 90° = 160 px makiety (caly pasek = 
 local NTICK = 32                         -- kreska co 11,25° (co 20 px makiety)
 local TWO_PI = 2 * math.pi
 local DIRS = { { 0, "Pn" }, { math.pi / 2, "Zach" }, { math.pi, "Pd" }, { -math.pi / 2, "Wsch" } }
+local DIRS2 = { { -math.pi / 4, "Pn-Wsch" }, { -3 * math.pi / 4, "Pd-Wsch" }, { 3 * math.pi / 4, "Pd-Zach" }, { math.pi / 4, "Pn-Zach" } }
 local HERB, ORE = { 0.50, 0.79, 0.35 }, { 0.82, 0.55, 0.32 }
 local MAX_QUESTS, MAX_NODES, NODE_RANGE = 5, 2, 250   -- jardy
 local MAX_HERE = 3                                     -- romby „Przy okazji” Polestara
@@ -123,7 +128,9 @@ local function collect()
         local _, d = vec(map, px, py, p.x, p.y)
         if d and (not bd or d < bd) then best, bd = p, d end
       end
-      if best then qs[#qs + 1] = { kind = best.kind == "done" and "done" or "obj", x = best.x, y = best.y, col = q.col, d = bd } end
+      if best then qs[#qs + 1] = { kind = best.kind == "done" and "done" or "obj", x = best.x, y = best.y, col = q.col, d = bd,
+        glyph = U.ZN_TYPE and U.ZN_TYPE[best.otype or ""] or nil,
+        tip = { q.title, best.kind == "done" and ("oddaj" .. (best.name and (": " .. best.name) or "")) or (best.text or best.name) } } end
     end
     table.sort(qs, function(a, b) return a.d < b.d end)
     for i = 1, math.min(MAX_QUESTS, #qs) do items[#items + 1] = qs[i] end
@@ -133,7 +140,8 @@ local function collect()
     for _, n in ipairs(type(nodes) == "table" and nodes or {}) do
       if n.req and n.skill and n.req <= n.skill and (n.d or 0) ~= 3 then
         local _, d = vec(map, px, py, n.x, n.y)
-        if d and d <= NODE_RANGE then ns[#ns + 1] = { kind = "node", x = n.x, y = n.y, col = n.prof == "Mining" and ORE or HERB, d = d } end
+        if d and d <= NODE_RANGE then ns[#ns + 1] = { kind = "node", x = n.x, y = n.y, col = n.prof == "Mining" and ORE or HERB, d = d,
+          tip = { n.name, (n.prof == "Mining" and "ruda" or "zioło") .. " · da punkt (" .. tostring(n.skill) .. "/" .. tostring(n.req) .. ")" } } end
       end
     end
     table.sort(ns, function(a, b) return a.d < b.d end)
@@ -142,7 +150,7 @@ local function collect()
     local here = U.psHereSpots and U.call(U.psHereSpots)
     for i, h in ipairs(type(here) == "table" and here or {}) do
       if i > MAX_HERE then break end
-      items[#items + 1] = { kind = "here", map = h.map, x = h.x / 100, y = h.y / 100, col = C.frost }
+      items[#items + 1] = { kind = "here", map = h.map, x = h.x / 100, y = h.y / 100, col = C.frost, tip = { "Przy okazji", h.text } }
     end
   end
   K.items, K.map = items, map
@@ -181,24 +189,43 @@ local function marker(i)
   if m then return m end
   local k = K.k
   m = CreateFrame("Frame", nil, f)
-  m:SetSize(56 * k, 34 * k)
-  m.rh = U.Diamond(m, 16 * k, C.gold, true)
-  m.rh:SetPoint("TOP", m, "TOP", 0, 0)
-  m.q = txt(m, 17 * k, "title", C.gold)
-  m.q:SetText("?")
-  m.q:SetPoint("TOP", m, "TOP", 0, 3 * k)
-  m.dot = m:CreateTexture(nil, "ARTWORK")
-  m.dot:SetSize(8 * k, 8 * k)
-  m.dot:SetPoint("TOP", m, "TOP", 0, -4 * k)
-  m.dot:SetColorTexture(1, 1, 1, 1)
-  pcall(function()
-    local mk = m:CreateMaskTexture()
-    mk:SetTexture("Interface\\CHARACTERFRAME\\TempPortraitAlphaMask", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
-    mk:SetAllPoints(m.dot)
-    m.dot:AddMaskTexture(mk)
+  m:SetSize(64 * k, 44 * k)
+  m.zn = U.Znacznik(m, 28 * k)
+  m.zn:SetPoint("CENTER", m, "TOP", 0, -12 * k)
+  -- 15.11 (gracz: „jak najezdzam kursorem na znacznik na kompasie, mogloby sie rozwijac i mowic, co to za znacznik”):
+  -- tylko sama ikona lapie mysz (pasek kompasu dalej nie); najazd: wiekszy znacznik i dymek z opisem
+  m.zn:EnableMouse(true)
+  m.zn:SetScript("OnEnter", function()
+    m.hover = true
+    local v = m.v
+    if not v then return end
+    local TITLE = { target = "Cel prowadzenia", obj = "Cel zadania", done = "Zadanie do oddania", node = "Zbieranie", here = "Przy okazji" }
+    local TT = U.TT
+    TT:SetOwner(m.zn, "ANCHOR_BOTTOM", 0, -6)
+    local t = v.tip or {}
+    TT:SetText(t[1] or TITLE[v.kind] or "?", C.gold[1], C.gold[2], C.gold[3])
+    if t[2] and t[2] ~= "" then TT:AddLine(t[2], 0.93, 0.91, 0.86, true) end
+    local dist = U.fmtDistance and U.fmtDistance((v.d or 0) * 0.9144) or ""
+    local eta = v.kind == "target" and K.eta and U.G and U.G.etaShort and U.G.etaShort(K.eta)
+    TT:AddLine(TITLE[v.kind] .. " · " .. dist .. (eta and (" · " .. eta) or ""), 0.64, 0.61, 0.55)
+    TT:Show()
   end)
-  m.num = txt(m, 12 * k, "body", C.text)
-  m.num:SetPoint("TOP", m, "TOP", 0, -17 * k)
+  m.zn:SetScript("OnLeave", function() m.hover = nil U.TT:Hide() end)
+  -- strzalka na brzegu (cel poza paskiem)
+  m.edge = m:CreateTexture(nil, "OVERLAY")
+  m.edge:SetTexture(U.ZN.krawedz)
+  m.edge:SetSize(22 * k, 22 * k)
+  m.edge:Hide()
+  -- odleglosc: pod celem w ciemnej pigulce, pod innymi sam napis
+  m.pill = CreateFrame("Frame", nil, m)
+  m.pill.bg = U.Rect(m.pill, C.bg, 0.86) m.pill.bg:SetAllPoints()
+  U.Border(m.pill, C.edge, 0.9)
+  m.pill:Hide()
+  -- napis na wlasnej ramce nad pigulka (poziomy ustawia rysowanie)
+  m.textF = CreateFrame("Frame", nil, m)
+  m.textF:SetAllPoints()
+  m.num = txt(m.textF, 12 * k, "body", C.text)
+  m.num:SetPoint("TOP", m, "TOP", 0, -28 * k)
   pool[i] = m
   return m
 end
@@ -214,7 +241,7 @@ local function build()
   f:EnableMouse(false)
   f:Hide()
   -- delikatne tlo pod kreskami (czytelnosc na sniegu Dun Morogh), wygaszone na koncach jak w makiecie
-  fadeBar(f, 0, H0 * k, C.bg, 0.22, "BACKGROUND")
+  fadeBar(f, 0, H0 * k, C.bg, 0.32, "BACKGROUND")
   -- kreski i linia bazowa
   for i = 1, NTICK do
     local t = f:CreateTexture(nil, "ARTWORK")
@@ -232,6 +259,13 @@ local function build()
     letters[i] = txt(f, 15 * k, "title", C.text)
     letters[i]:SetText(d[2])
     letters[i].a = d[1]
+  end
+  K.letters2 = {}
+  for i, d in ipairs(DIRS2) do
+    local fs = txt(f, 10 * k, "title", C.text)
+    fs:SetText(d[2])
+    fs.a = d[1]
+    K.letters2[i] = fs
   end
   f:SetScript("OnUpdate", function(_, el)
     K.acc = (K.acc or 0) + el
@@ -261,7 +295,7 @@ local function measure()
           local dn, dw = d * math.cos(b), d * math.sin(b)
           dup = math.sqrt((dn - tn) ^ 2 + (dw - tw) ^ 2) < DEDUP
         end
-        if not dup then vis[#vis + 1] = { kind = it.kind, b = b, d = d, col = it.col } end
+        if not dup then vis[#vis + 1] = { kind = it.kind, b = b, d = d, col = it.col, glyph = it.glyph, tip = it.tip } end
       end
     end
   end
@@ -305,6 +339,16 @@ function U.kompasDraw()
     local r = math.abs(wrap(fs.a - facing))
     if not bestR or r < bestR then bestI, bestR = i, r end
   end
+  for _, fs in ipairs(K.letters2 or {}) do
+    local x = -wrap(fs.a - facing) * PXR * k
+    local a = fade(x, hw)
+    if a > 0 then
+      fs:ClearAllPoints()
+      fs:SetPoint("TOP", f, "TOP", x, -3 * k)
+      U.Color(fs, C.text, 0.38 * a)
+      fs:Show()
+    else fs:Hide() end
+  end
   for i, fs in ipairs(letters) do
     local x = -wrap(fs.a - facing) * PXR * k
     local a = fade(x, hw)
@@ -321,6 +365,13 @@ function U.kompasDraw()
   for _, v in ipairs(K.vis) do
     local x = -wrap(v.b - facing) * PXR * k
     local a = fade(x, hw)
+    -- M8: cel prowadzenia poza paskiem: przyklejony do brzegu ze strzalka
+    local edge = nil
+    if a <= 0 and v.kind == "target" then
+      edge = x < 0 and -1 or 1
+      x = edge * (hw - 30 * k)
+      a = 1
+    end
     if a > 0 then
       n = n + 1
       local m = marker(n)
@@ -330,14 +381,31 @@ function U.kompasDraw()
       -- 15.11 (gracz: „zniknal mi kompas, chyba po walce”): przy wielu znacznikach poziom wychodzil ujemny (node: 2 - 9),
       -- gra zglaszala blad SetFrameLevel, a kompas chowal sie na stale. Podstawa +10 i przyciecie do 0–65535.
       local lvl = f:GetFrameLevel() + 10 + (v.kind == "target" and 20 or (v.kind == "node" and 2 or (v.kind == "here" and 15 or 10))) - math.min(n, 9)
-      m:SetFrameLevel(math.max(0, math.min(65535, lvl)))
-      m.rh:SetShown(v.kind == "target" or v.kind == "obj" or v.kind == "here")
-      if v.kind == "target" then m.rh:Set(C.gold, true)
-      elseif v.kind == "here" then m.rh:Set(C.frost, true)
-      elseif v.kind == "obj" then m.rh:Set(v.col or C.text, false) end
-      m.q:SetShown(v.kind == "done")
-      m.dot:SetShown(v.kind == "node")
-      if v.kind == "node" then local c = v.col or HERB m.dot:SetVertexColor(c[1], c[2], c[3], 1) end
+      lvl = math.max(0, math.min(65530, lvl))
+      m:SetFrameLevel(lvl)
+      m.pill:SetFrameLevel(lvl + 1) m.textF:SetFrameLevel(lvl + 2) m.zn:SetFrameLevel(lvl + 3)
+      -- M1-M7: rodzaj, wielkosc wg odleglosci (blizej wiekszy i jasniejszy), alfa
+      local kind = (v.kind == "target" and "cel") or (v.kind == "done" and "oddaj") or (v.kind == "here" and "przy_okazji")
+        or (v.kind == "node" and (v.col == ORE and "ruda" or "ziolo")) or "zadanie"
+      local base = (v.kind == "target" and 34) or (v.kind == "node" and 20) or (v.kind == "here" and 24) or 28
+      local sc = v.kind == "target" and 1 or math.max(0.7, math.min(1.12, 1.15 - (v.d or 0) / 900))
+      m.v = v
+      if v.kind == "target" and not v.tip then
+        local N = Polestar and Polestar.Nav
+        local okT, tg = pcall(function() return N and N.GetTarget and N.GetTarget() end)
+        if okT and type(tg) == "table" then v.tip = { tg.label or tg.title or "Cel prowadzenia", tg.text } end
+      end
+      m.zn:SetSizeAll(base * sc * k * (m.hover and 1.3 or 1))
+      m.zn:Set(kind, { col = v.col, glyph = v.glyph })
+      if m.hover then m:SetAlpha(1) end
+      if v.kind ~= "target" then m:SetAlpha(a * math.max(0.55, math.min(1, sc))) end
+      m.edge:SetShown(edge ~= nil)
+      if edge then
+        m.edge:ClearAllPoints()
+        m.edge:SetPoint("RIGHT", m.zn, "LEFT", edge < 0 and 2 * k or 0, 0)
+        if edge < 0 then m.edge:SetTexCoord(0, 1, 0, 1)
+        else m.edge:ClearAllPoints() m.edge:SetPoint("LEFT", m.zn, "RIGHT", -2 * k, 0) m.edge:SetTexCoord(1, 0, 0, 1) end
+      end
       local free = v.kind ~= "node"
       if free then
         for _, ux in ipairs(used) do if math.abs(ux - x) < 38 * k then free = false break end end
@@ -348,7 +416,15 @@ function U.kompasDraw()
         m.num:SetText((U.fmtDistance and U.fmtDistance(v.d * 0.9144) or "") .. (eta and (" · " .. eta) or ""))
         U.Color(m.num, v.kind == "target" and C.gold or (v.kind == "here" and C.frost or C.text))
         m.num:Show()
-      else m.num:Hide() end
+        -- M7: pigulka pod celem prowadzenia
+        if v.kind == "target" then
+          local w = (m.num:GetStringWidth() or 40) + 16 * k
+          m.pill:ClearAllPoints()
+          m.pill:SetPoint("CENTER", m.num, "CENTER", 0, 0)
+          m.pill:SetSize(w, 18 * k)
+          m.pill:Show()
+        else m.pill:Hide() end
+      else m.num:Hide() m.pill:Hide() end
       m:Show()
     end
   end

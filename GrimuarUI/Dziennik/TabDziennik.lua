@@ -126,11 +126,11 @@ local function rewardSlot(i)
   if s then return s end
   s = U.Slot(D.pa, 40)
   s:SetScript("OnEnter", function(self)
-    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    if not pcall(GameTooltip.SetQuestLogItem, GameTooltip, self.kind, self.idx, D.sel) then GameTooltip:SetText(self.name or "") end
-    GameTooltip:Show()
+    U.TT:SetOwner(self, "ANCHOR_RIGHT")
+    if not pcall(U.TT.SetQuestLogItem, U.TT, self.kind, self.idx, D.sel) then U.TT:SetText(self.name or "") end
+    U.TT:Show()
   end)
-  s:SetScript("OnLeave", function() GameTooltip:Hide() end)
+  s:SetScript("OnLeave", function() U.TT:Hide() end)
   D.rew[i] = s
   return s
 end

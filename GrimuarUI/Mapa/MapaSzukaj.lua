@@ -5,6 +5,8 @@
 -- Darnassus; MapaUslugi.lua), wpisany tekst = filtr po nazwie, roli i tytule, a pod spodem pasujace postacie
 -- z calego swiata (QuestieDB, indeks nazw budowany raz, po kawalku). Klik albo Enter: mapa strefy, znacznik i strzalka.
 -- Komenda: /npc nazwa (od razu prowadzi do najlepszego wyniku). Tylko odczyt z Questie.
+-- 15.11 (R30 P29, gracz: „wyszukiwarka NPC i przedmiotow”): wpisany tekst idzie najpierw do Polestar.Search
+-- (MapaSzukajPolestar.lua, karty wg rodzaju); indeks Questie zostaje zapasem (bez Polestara, w walce przed baza).
 local ADDON, U = ...
 local C = U.C
 
@@ -133,14 +135,19 @@ local function row(i)
   if r then return r end
   r = CreateFrame("Button", nil, S.child)
   r:SetHeight(ROW_H)
+  -- 15.11 (R30 P29): wiersz jako karta (tlo, ramka, ikona 26), prawy klik i dymek (wyniki z MapaSzukajPolestar.lua)
+  r.bg = U.Rect(r, C.panel2, 0.75) r.bg:SetAllPoints()
+  U.Border(r, C.line)
+  r:RegisterForClicks("LeftButtonUp", "RightButtonUp")
   r.hl = r:CreateTexture(nil, "HIGHLIGHT")
   r.hl:SetAllPoints()
   r.hl:SetColorTexture(1, 1, 1, 0.06)
   r.ic = r:CreateTexture(nil, "ARTWORK")
-  r.ic:SetSize(18, 18)
-  r.ic:SetPoint("TOPLEFT", 6, -4)
+  r.ic:SetSize(26, 26)
+  r.ic:SetPoint("TOPLEFT", 7, -7)
+  r.ic:SetTexCoord(0.08, 0.92, 0.08, 0.92)
   r.n = U.Text(r, 14, "body", C.gold)
-  r.n:SetPoint("TOPLEFT", 30, -4)
+  r.n:SetPoint("TOPLEFT", 40, -4)
   r.n:SetWidth(330)
   r.s = U.Text(r, 12, "body", C.muted)
   r.s:SetPoint("TOPLEFT", r.n, "BOTTOMLEFT", 0, -3)
@@ -149,7 +156,18 @@ local function row(i)
   r.h:SetPoint("BOTTOMLEFT", 6, 5)
   r.line = U.Line(r, C.line)
   r.line:SetPoint("BOTTOMLEFT", 0, 0) r.line:SetPoint("BOTTOMRIGHT", 0, 0)
-  r:SetScript("OnClick", function(self) if self.r then pick(self.r) end end)
+  r:SetScript("OnClick", function(self, btn)
+    if not self.r then return end
+    if self.r.act then pcall(self.r.act, btn) else pick(self.r) end
+  end)
+  r:SetScript("OnEnter", function(self)
+    if not (self.tip or self.item) then return end
+    U.TT:SetOwner(self, "ANCHOR_RIGHT")
+    if not (self.item and pcall(U.TT.SetItemByID, U.TT, self.item)) then U.TT:SetText(self.tip or "", 1, 1, 1, 1, true)
+    elseif self.tip then U.TT:AddLine(self.tip, 0.8, 0.8, 0.8, true) end
+    U.TT:Show()
+  end)
+  r:SetScript("OnLeave", function() U.TT:Hide() end)
   S.rows[i] = r
   return r
 end
@@ -175,6 +193,9 @@ local function render(items, note)
     b:ClearAllPoints()
     b:SetPoint("TOPLEFT", S.child, "TOPLEFT", 0, -y)
     b:SetPoint("TOPRIGHT", S.child, "TOPRIGHT", 0, -y)
+    b.bg:SetShown(not it.head)
+    U.BorderColor(b, C.line, it.head and 0 or 1)
+    b.tip, b.item = it.tip, it.item
     if it.head then
       b:SetHeight(HEAD_H)
       b.r = nil
@@ -187,14 +208,14 @@ local function render(items, note)
       b:SetHeight(ROW_H)
       b.r = it.r
       b.n:SetText(it.title)
-      U.Color(b.n, it.r.enemy and C.danger or C.gold)
+      U.Color(b.n, it.col or (it.r.enemy and C.danger or C.gold))
       b.s:SetText(it.sub or "")
       b.ic:SetShown(it.icon ~= nil)
       if it.icon then b.ic:SetTexture(it.icon) end
       b.h:Hide() b.line:Hide()
       b.n:Show() b.s:Show()
       b:EnableMouse(true)
-      y = y + ROW_H + 2
+      y = y + ROW_H + 4
     end
     b:Show()
   end
@@ -216,6 +237,8 @@ end
 -- puste pole: katalog wg miejsc; tekst: filtr katalogu + cale swiato
 local function run(q, auto)
   q = q or S.box:GetText() or ""
+  -- 15.11 (gracz: „co gdzie kupic”): tryb Kup (MapaKupWidok.lua): tylko przedmioty i ich kupcy; /npc zawsze zwykle
+  if not auto and U.buyOn and U.buyOn() and U.buyRun then return U.buyRun(q) end
   local ql = q:lower():gsub("^%s+", ""):gsub("%s+$", "")
   if not U.serviceDirectory then return end
   U.serviceDirectory(function(groups)
@@ -239,7 +262,17 @@ local function run(q, auto)
       render(items, #items == 0 and "Wczytuję postacie z Questie…" or nil)
       return
     end
-    render(items, IDX.names and nil or "Szukam w całym świecie…")
+    -- 15.11 (R30 P29): najpierw Polestar.Search (MapaSzukajPolestar.lua: postacie, rzadkie, questy, przedmioty, lochy
+    -- jako karty); bez Polestara, bez jego bazy albo w walce przed jej wczytaniem: Questie jak dotad
+    local psNote
+    if U.psSearchRun then
+      local ok, done, note = pcall(U.psSearchRun, q, items, { render = render, pick = pick, first = firstR, auto = auto,
+        still = function() return auto or (S.box:GetText() or "") == q end,
+        close = function() S.box:ClearFocus() hideList() end, rerun = function() run(q, auto) end })
+      if ok and done then return end
+      psNote = ok and note or nil
+    end
+    render(items, IDX.names and psNote or "Szukam w całym świecie…")
     withIndex(function()
       if IDX.fail then render(items, "Questie nie podał bazy postaci (wyłączony albo jeszcze się wczytuje).") return end
       if (S.box:GetText() or "") ~= q and not auto then return end
@@ -258,7 +291,7 @@ local function run(q, auto)
           firstR = firstR or r
         end
       end
-      render(all)
+      render(all, psNote)
       if auto and firstR then pick(firstR) end
     end)
   end)
@@ -282,7 +315,7 @@ function U.mapSearchBuild(parent)
   local ph = U.Text(box, 13, "body", C.faint)
   ph:SetPoint("LEFT", 10, 0)
   ph:SetJustifyV("MIDDLE")
-  ph:SetText("Szukaj postaci: kliknij = lista miast")
+  ph:SetText("Szukaj: postać, przedmiot, quest, loch")
   S.box = box
 
   local list = CreateFrame("Frame", nil, parent)
@@ -329,7 +362,9 @@ function U.mapSearchBuild(parent)
   box:SetScript("OnEnterPressed", function()
     local first
     for _, it in ipairs(S.items or {}) do if it.r then first = it.r break end end
-    if first and S.list:IsShown() then pick(first) else run() end
+    if first and S.list:IsShown() then
+      if first.act then pcall(first.act, "LeftButton") else pick(first) end -- 15.11 (R30 P29): karta z Polestara
+    else run() end
   end)
   box:SetScript("OnEscapePressed", function(self)
     self:ClearFocus()
@@ -337,6 +372,8 @@ function U.mapSearchBuild(parent)
   end)
   box:SetScript("OnEditFocusGained", function() run() end)
   box:SetScript("OnMouseDown", function(self) if not self:HasFocus() then self:SetFocus() end end)
+  local api = { render = render, run = function() run() end, close = function() box:ClearFocus() hideList() end }
+  if U.mapBuyBuild then pcall(U.mapBuyBuild, box, ph, api) end -- 15.11: przelacznik „Kup” i skroty (MapaKupWidok.lua)
   return box
 end
 

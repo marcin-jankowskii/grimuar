@@ -356,7 +356,7 @@ local function buildAddony()
     { "Pierwszy raz: wpisz /polestar guides i wybierz trasę dla Gnoma.",
       "Okno przewodnika pokazuje bieżący krok i sam go odhacza, gdy zrobisz cel.",
       "Strzałka na ekranie prowadzi prawdziwymi ścieżkami, także do lotów.",
-      "Po awansie karta pokazuje, co kupić u trenera. Train All uczy wszystkiego jednym kliknięciem.",
+      "Po awansie karta pokazuje, co kupić u trenera. Kupuj przyciskiem Grimuara „Kup wg buildu”.",
       "Grimuar w Teraz zrób odsyła do Polestara przy questach, a sam pilnuje reszty (talenty, pancerz, woda, książki)." })
   addonBlock("Questie",
     "pokazuje, gdzie wziąć questy i gdzie je zrobić.",

@@ -74,10 +74,10 @@ function U.questPins(uiMapID)
                 local before = #mine
                 for _, sl in pairs(type(o.spawnList) == "table" and o.spawnList or {}) do
                   if type(sl) == "table" then
-                    spawnsIn(sl.Spawns, area, mine, { kind = "obj", text = o.Description, name = sl.Name })
+                    spawnsIn(sl.Spawns, area, mine, { kind = "obj", text = o.Description, name = sl.Name, otype = o.Type })
                   end
                 end
-                if #mine == before then spawnsIn(o.Coordinates, area, mine, { kind = "obj", text = o.Description }) end
+                if #mine == before then spawnsIn(o.Coordinates, area, mine, { kind = "obj", text = o.Description, otype = o.Type }) end
               end
             end
           end

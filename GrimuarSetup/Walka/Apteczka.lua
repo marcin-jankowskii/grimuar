@@ -100,7 +100,14 @@ end
 
 -- klawisze raz na konto; zajetych przez Ciebie nie rusza
 local function bindKeys()
-  if (GrimuarSetupDB.apteczkaV or 0) >= 2 or InCombatLockdown() then return end
+  if InCombatLockdown() then return end
+  -- 15.11 (gracz: „bandazy nie mam pod zadnym przyciskiem”): nie tylko raz na konto; gdy bandaz, mikstura albo
+  -- sledzenie nie maja zadnego klawisza, Grimuar podpina je znowu (tylko na wolnym klawiszu)
+  if (GrimuarSetupDB.apteczkaV or 0) >= 2 then
+    local missing = false
+    for _, k in ipairs(KEYS) do if not GetBindingKey(k[2]) then missing = true end end
+    if not missing then return end
+  end
   if GetMacroIndexByName("Bandaz") == 0 or GetMacroIndexByName("Mikstura") == 0 or GetMacroIndexByName("Sledzenie") == 0 then return end
   local function nice(key) return (key:gsub("SHIFT%-", "Shift+"):gsub("ALT%-", "Alt+")) end
   local done, busy = {}, {}

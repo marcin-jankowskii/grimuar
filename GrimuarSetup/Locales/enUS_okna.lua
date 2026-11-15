@@ -225,7 +225,15 @@ for pl, en in pairs({
   ["to już zrobione."] = "that's already done.", ["Polestar jeszcze się wczytuje. Spróbuj za chwilę."] = "Polestar is still loading. Try again in a moment.",
   -- Kontrola (Q7)
   ["lochy: zbieranie questów pokazują Wyprawy Grimuara (bez karty Polestara)"] = "dungeons: quest pick-up is shown by Grimuar's Expeditions (no Polestar card)",
+  ["lista questów Questie schowana: questy masz w oknie Polestara i w Dzienniku (J). Znaczniki Questie zostają."] =
+    "Questie quest list hidden: your quests are in the Polestar window and the Journal (J). Questie map marks stay.",
+  ["lista celów gry schowana (opcja Polestara): questy masz w oknie Polestara i w Dzienniku (J)."] =
+    "Game objective tracker hidden (Polestar option): your quests are in the Polestar window and the Journal (J).",
+  ["lista celów gry schowana (questy w oknie Polestara i w Dzienniku)"] = "game objective tracker hidden (quests in the Polestar window and the Journal)",
+  ["kółka GatherMate2 na minimapie wyłączone: zioła i ruda pokazuje teraz Grimuar. Mapa świata bez zmian."] =
+    "GatherMate2 minimap circles turned off: Grimuar shows herbs and ore now. World map unchanged.",
 }) do T[pl] = en end
+P[#P + 1] = { "^nowe klawisze z buildu podpięte: (%d+) %(tylko wolne klawisze%)%.$", "new build key bindings set: %1 (free keys only)." }
 
 -- napisy z liczbami (pierwszy pasujacy wzorzec wygrywa)
 for _, p in ipairs({
@@ -366,4 +374,158 @@ for _, p in ipairs({
   { "^(%d+) niedokończone$", "%1 unfinished" },
   { "^(%d+) oddajesz w lochu$", "%1 handed in inside" },
   { "^I jeszcze (%d+) kroków dalej%.$", "%1 more steps further on." },
+}) do P[#P + 1] = p end
+
+-- 15.11 („Mistrz lotow i Handel”): okno lotow, pasek lotu i okno handlu (GrimuarUI Okna\Lot.lua, Hud\Lot.lua, Okna\Handel.lua)
+for pl, en in pairs({
+  ["okna Grimuara: /hub okna kupiec|trener|poczta|bank|profesja|lup|rzuty|lot|handel przełącza okno Grimuara albo okno gry."] =
+    "Grimuar windows: /hub okna kupiec|trener|poczta|bank|profesja|lup|rzuty|lot|handel switches between the Grimuar window and the game window.",
+  -- okno lotow
+  ["trasa Polestara leci tutaj"] = "Polestar's route flies here", ["najbliżej celu strzałki"] = "closest to the arrow's target",
+  ["w strefie celu strzałki"] = "in the arrow target's zone", ["ten lot jest niedostępny stąd"] = "this flight isn't available from here",
+  ["za mało pieniędzy na lot"] = "not enough money for the flight",
+  ["gra nie pozwoliła polecieć: wybierz cel w klasycznym oknie."] = "the game didn't allow the flight: pick the destination in the classic window.",
+  ["brak połączenia stąd"] = "no connection from here", ["jeszcze nie odkryty"] = "not discovered yet",
+  ["szacunek Polestara"] = "Polestar estimate", ["zapamiętany lot"] = "remembered flight", ["bez przesiadek"] = "direct",
+  ["Klik: leć"] = "Click: fly", ["niedostępny"] = "unavailable", ["Cel prowadzenia"] = "Guided destination",
+  ["Znalezione"] = "Found", ["Najbliższe"] = "Nearest", ["Niedostępne"] = "Unavailable",
+  ["Nic nie pasuje do szukania."] = "Nothing matches the search.", ["Mapa lotów jest pusta."] = "The flight map is empty.",
+  ["Lecisz z"] = "Flying from", ["Szukaj: miejsce albo strefa"] = "Search: place or zone",
+  ["klik w kartę: leć · najedź: szczegóły · szare: niedostępne"] = "click a card: fly · hover: details · gray: unavailable",
+  -- pasek lotu
+  ["Lot"] = "Flight", ["Skąd"] = "From", ["Czas: szacunek Polestara (odliczam)"] = "Time: Polestar estimate (counting down)",
+  ["Czas: zapamiętany lot (odliczam)"] = "Time: remembered flight (counting down)",
+  ["Czas od startu (szacunku brak)"] = "Time since take-off (no estimate)",
+  ["Wyłączysz w Ustawieniach (Grimuar) albo /hub lot."] = "Turn it off in Settings (Grimuar) or with /hub lot.",
+  ["pasek lotu u góry ekranu włączony."] = "flight bar at the top of the screen on.", ["pasek lotu wyłączony."] = "flight bar off.",
+  ["Pasek lotu u góry ekranu: cel i czas lotu (hub)"] = "Flight bar at the top of the screen: destination and flight time (hub)",
+  -- handel
+  ["Handel"] = "Trade", ["poziom"] = "level", ["Ty dajesz"] = "You give", ["Dostajesz"] = "You get",
+  ["zaakceptowane"] = "accepted", ["Zaakceptowane"] = "Accepted", ["Akceptuj"] = "Accept", ["Anuluj"] = "Cancel",
+  ["Akceptuj w oknie gry"] = "Accept in the game window", ["Na pewno? Kliknij jeszcze raz"] = "Sure? Click again",
+  ["Zmień kwotę w oknie gry"] = "Change the amount in the game window", ["nic"] = "nothing", ["U kupca"] = "Vendor price",
+  ["przeciągnij przedmiot na „Ty dajesz” albo prawy klik w torbie · Shift+klik: link"] =
+    "drag an item onto “You give” or right-click it in your bags · Shift-click: link",
+  ["nie będzie wymieniony (tylko zaklęcie)"] = "will not be traded (enchant only)", ["nie możesz tego użyć"] = "you can't use this",
+  ["miejsce na zaklęcie (nie wymieniane)"] = "enchant slot (not traded)", ["upuść tu przedmiot"] = "drop an item here",
+  ["miejsce na zaklęcie"] = "enchant slot",
+  ["Przeciągnij tu przedmiot z torby albo kliknij z przedmiotem na kursorze (prawy klik w torbie też działa)."] =
+    "Drag an item here from your bags or click with an item on the cursor (right-clicking it in your bags works too).",
+  ["Tu pojawi się to, co dostajesz."] = "What you get shows up here.",
+  ["Sprawdź, zanim zaakceptujesz"] = "Check before you accept", ["Dajesz rzeczy warte u kupca"] = "You're giving items a vendor values at",
+  ["a nic nie dostajesz."] = "and getting nothing.", ["Kliknij Akceptuj jeszcze raz, jeśli tak ma być."] = "Click Accept again if that's intended.",
+  ["Przy tym ostrzeżeniu Akceptuj działa dopiero za drugim kliknięciem (w 5 s, bez zmian w ofercie)."] =
+    "With this warning, Accept works only on the second click (within 5 s, with the offer unchanged).",
+  ["Druga strona zaakceptowała."] = "The other side has accepted.", ["Druga strona jeszcze nie zaakceptowała."] = "The other side hasn't accepted yet.",
+  ["w walce handel zostaje w oknie gry."] = "in combat, trading stays in the game window.",
+  ["brak przycisku handlu gry: zaakceptuj w klasycznym oknie."] = "the game's Trade button is missing: accept in the classic window.",
+  ["już zaakceptowałeś: czekasz na drugą stronę."] = "you've accepted: waiting for the other side.",
+  ["gra jeszcze nie pozwala zaakceptować (oferta właśnie się zmieniła)."] = "the game doesn't allow accepting yet (the offer just changed).",
+  ["oferujesz więcej pieniędzy, niż masz."] = "you're offering more money than you have.",
+  ["gra nie pozwoliła Grimuarowi nacisnąć przycisku handlu: akceptujesz w oknie gry (do następnej wersji Grimuara)."] =
+    "the game didn't let Grimuar press the Trade button: you accept in the game window (until the next Grimuar version).",
+}) do T[pl] = en end
+for _, p in ipairs({
+  { "^(~?%d+:%d%d) lotu$", "%1 flight" },
+  { "^1 przesiadka$", "1 stop" },
+  { "^(%d+) przesiadki$", "%1 stops" },
+  { "^(%d+) przesiadek$", "%1 stops" },
+  { "^Lot do (.+)$", "Flight to %1" },
+  { "^Handel z (.+)$", "Trade with %1" },
+  { "^1 przedmiot$", "1 item" },
+  { "^(%d+) przedmioty$", "%1 items" },
+  { "^(%d+) przedmiotów$", "%1 items" },
+}) do P[#P + 1] = p end
+
+-- 15.11 (R30 P29, P32, P33): wyszukiwarka Polestara na Mapie (GrimuarUI Mapa\MapaSzukajPolestar.lua), rzadkie
+-- w Ksiedze (Ksiega\KsiegaRzadkie.lua) i alarm rzadkiego (Hud\AlarmRzadki.lua)
+for pl, en in pairs({
+  -- wyszukiwarka
+  ["Szukaj: postać, przedmiot, quest, loch"] = "Search: NPC, item, quest, dungeon",
+  ["Wróć do wyników"] = "Back to results", ["lista wyszukiwania"] = "search list", ["Prowadź po to"] = "Guide me to it",
+  ["nowa karta przewodnika w Polestarze"] = "a new guide tab in Polestar",
+  ["Polestar buduje przewodnik po ten przedmiot i otwiera go w nowej karcie (najwyżej 6 kart)."] =
+    "Polestar builds a guide to this item and opens it in a new tab (6 tabs at most).",
+  ["Ładuję bazę Polestara…"] = "Loading Polestar's database…",
+  ["W walce baza Polestara się nie ładuje: szukam tylko postaci (Questie)."] = "Polestar's database doesn't load in combat: searching NPCs only (Questie).",
+  ["Polestar nie odpowiedział: szukam tylko postaci (Questie)."] = "Polestar didn't answer: searching NPCs only (Questie).",
+  ["Nic nie znalazłem (baza Polestara)."] = "Nothing found (Polestar's database).",
+  ["Polestar nie zna miejsca."] = "Polestar doesn't know the place.",
+  ["już niedostępne"] = "no longer available", ["źródło nieznane"] = "source unknown", ["w dzienniku"] = "in your log",
+  ["Klik: Prowadź (mapa i strzałka Polestar)."] = "Click: guide (map and Polestar arrow).",
+  ["Klik: Prowadź do najbliższego miejsca, gdzie się pojawia."] = "Click: guide to the nearest place it spawns.",
+  ["Klik: Prowadź do najbliższego miejsca."] = "Click: guide to the nearest place.",
+  ["Klik: pokaż strefę na mapie."] = "Click: show the zone on the map.",
+  ["Klik: Wyprawy · PPM: Prowadź do wejścia."] = "Click: Expeditions · right-click: guide to the entrance.",
+  ["Klik: skąd zdobyć · Shift+klik: link na czat"] = "Click: where to get it · Shift-click: link to chat",
+  ["Klik: Dziennik · PPM: Prowadź do oddania."] = "Click: Journal · right-click: guide to the turn-in.",
+  ["Klik: Prowadź do zleceniodawcy."] = "Click: guide to the quest giver.",
+  -- rzadkie w Ksiedze
+  ["Rzadkie stwory i skarby"] = "Rares and treasures", ["skarb"] = "treasure", ["szary"] = "grey",
+  ["W walce baza Polestara się nie ładuje: rzadkie stwory pokażę po walce."] = "Polestar's database doesn't load in combat: rares will show after combat.",
+  ["Polestar nie wczytał swojej bazy (addon Polestar_Codex): bez rzadkich stworów."] = "Polestar didn't load its database (the Polestar_Codex addon): no rares.",
+  ["Polestar nie zna rzadkich stworów ani skarbów w tej strefie."] = "Polestar knows no rares or treasures in this zone.",
+  ["przed chwilą"] = "just now", ["wczoraj"] = "yesterday",
+  -- alarm rzadkiego
+  ["Rzadki"] = "Rare", ["elita"] = "elite", ["w zasięgu wzroku"] = "in sight", ["klik: Prowadź"] = "click: guide",
+  ["1 łup"] = "1 loot item",
+  ["Alarm rzadkiego stwora w pobliżu (hub)"] = "Alert when a rare is nearby (hub)",
+  ["alarm rzadkich stworów włączony."] = "rare alert on.", ["alarm rzadkich stworów wyłączony."] = "rare alert off.",
+}) do T[pl] = en end
+for _, p in ipairs({
+  { "^Postacie %((%d+%+?)%)$", "NPCs (%1)" },
+  { "^Rzadkie stwory %((%d+%+?)%)$", "Rares (%1)" },
+  { "^Questy %((%d+%+?)%)$", "Quests (%1)" },
+  { "^Przedmioty %((%d+%+?)%)$", "Items (%1)" },
+  { "^Receptury %((%d+%+?)%)$", "Recipes (%1)" },
+  { "^Wierzchowce %((%d+%+?)%)$", "Mounts (%1)" },
+  { "^Lochy i rajdy %((%d+%+?)%)$", "Dungeons and raids (%1)" },
+  { "^Strefy %((%d+%+?)%)$", "Zones (%1)" },
+  { "^Skarby %((%d+%+?)%)$", "Treasures (%1)" },
+  { "^Skąd zdobyć: (.+)$", "Where to get: %1" },
+  { "^w dzienniku · (.+)$", "in your log · %1" },
+  { "^(.+) · już niedostępne$", "%1 · no longer available" },
+  { "^(.+) · źródło nieznane$", "%1 · source unknown" },
+  { "^Polestar nie zna miejsca: (.+)%.$", "Polestar doesn't know the place: %1." },
+  { "^nie znalazłem postaci „(.+)”: zobacz listę na mapie%.$", "no NPC named “%1”: see the list on the map." },
+  { "^poziom ([%d%?][^%a]*)$", "level %1" },
+  { "^widziany (.+)$", "seen %1" },
+  { "^zabity (.+)$", "killed %1" },
+  { "^(%d+) min temu$", "%1 min ago" },
+  { "^(%d+) h temu$", "%1 h ago" },
+  { "^(%d+) dni temu$", "%1 days ago" },
+  { "^(%d+) łupy$", "%1 loot items" },
+  { "^(%d+) łupów$", "%1 loot items" },
+}) do P[#P + 1] = p end
+
+-- 15.11 („co gdzie kupic”): tryb Kup na mapie huba (GrimuarUI Mapa\MapaKup.lua, Mapa\MapaKupWidok.lua)
+for pl, en in pairs({
+  ["Kup"] = "Buy", ["Kilof"] = "Pick", ["Runa teleportu"] = "Teleport rune", ["Torby"] = "Bags", ["Reagenty"] = "Reagents",
+  ["Mining Pick: bez niego nie wydobędziesz rudy."] = "Mining Pick: you can't mine ore without it.",
+  ["Rune of Teleportation: teleport maga do miasta (od 20. poziomu)."] = "Rune of Teleportation: the mage's teleport to a city (from level 20).",
+  ["Torby u kupca: 10, 8 i 6 miejsc."] = "Vendor bags: 10, 8 and 6 slots.",
+  ["Light Feather (Slow Fall), od 40 Rune of Portals, od 56 Arcane Powder."] = "Light Feather (Slow Fall), from 40 Rune of Portals, from 56 Arcane Powder.",
+  ["Gdzie kupić: pole szuka tylko przedmiotów, klik w przedmiot = kupcy od najbliższego i znaczniki na mapie. Kliknij jeszcze raz, żeby wrócić do zwykłego szukania."] =
+    "Where to buy: the field searches items only, click an item = vendors, nearest first, and pins on the map. Click again to return to the normal search.",
+  ["Kup: wpisz przedmiot, np. Mining Pick"] = "Buy: type an item, e.g. Mining Pick",
+  ["Kup: wpisz przedmiot albo kliknij skrót pod polem."] = "Buy: type an item or click a shortcut under the field.",
+  ["Gdzie kupić"] = "Where to buy", ["Najbliżej"] = "Nearest", ["inny kontynent"] = "other continent",
+  ["ograniczony zapas"] = "limited stock", ["lista przedmiotów"] = "item list", ["u 1 kupca"] = "at 1 vendor",
+  ["nie sprzedają tego kupcy"] = "no vendor sells it",
+  ["kupcy od najbliższego, znaczniki na mapie"] = "vendors, nearest first, pins on the map",
+  ["Klik: kupcy od najbliższego i znaczniki na mapie."] = "Click: vendors, nearest first, and pins on the map.",
+  ["Klik: skąd zdobyć (Polestar)."] = "Click: where to get it (Polestar).",
+  ["Nikt tego nie sprzedaje."] = "No vendor sells this.",
+  ["Bez Polestara i Questie nie znam kupców."] = "Without Polestar and Questie I don't know any vendors.",
+  ["W walce tylko Questie (baza Polestara po walce)."] = "In combat Questie only (Polestar's database after combat).",
+  ["Szukam przedmiotów w Questie…"] = "Searching items in Questie…",
+  ["Brak Polestara i Questie: nie mam bazy przedmiotów."] = "No Polestar and no Questie: no item database.",
+  ["W walce przedmioty z Questie (Polestar po walce)."] = "In combat: items from Questie (Polestar after combat).",
+}) do T[pl] = en end
+for _, p in ipairs({
+  { "^u (%d+) kupców$", "at %1 vendors" },
+  { "^Do kupienia %((%d+)%)$", "For sale (%1)" },
+  { "^Nie u kupca %((%d+)%)$", "Not sold by vendors (%1)" },
+  { "^Źródła: (.+) · klik: Prowadź$", "Sources: %1 · click: guide" },
+  { "^nie znam miejsca: (.+)%.$", "I don't know the place: %1." },
 }) do P[#P + 1] = p end

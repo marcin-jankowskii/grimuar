@@ -48,6 +48,8 @@ local function sessionText(r, isCur)
   local lv = (r.level0 and r.level and r.level > r.level0) and (r.level0 .. " → " .. r.level) or tostring(r.level or "?")
   L[#L + 1] = "Poziom " .. lv .. "   ·   zadania " .. (r.nq or 0) .. "   ·   zgony " .. (r.deaths or 0)
     .. ((r.hk or 0) > 0 and ("   ·   zabici z Hordy " .. r.hk) or "") .. ((r.shots or 0) > 0 and ("   ·   zrzuty " .. r.shots) or "")
+    -- 15.11 (R30 P26, „Mistrz lotow”): loty w sesji z paska lotu (Hud\Lot.lua: r.loty, r.lotyS)
+    .. ((r.loty or 0) > 0 and ("   ·   loty " .. r.loty .. " (" .. U.fmtMins((r.lotyS or 0) / 60) .. ")") or "")
   if r.zone then L[#L + 1] = MUTED .. "Ostatnio: " .. r.zone .. "|r" end
   -- rachunki
   local inc, out, net = {}, {}, 0

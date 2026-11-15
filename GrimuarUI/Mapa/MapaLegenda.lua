@@ -48,8 +48,9 @@ local function gatherNodes(uiMapID)
         if ok and x and y then
           local name = U.call(GM.GetNameForNode, GM, t[1], nodeID) or "?"
           local req = U.gatherReq and U.gatherReq(name)
+          -- 15.11: id i gtype dla minimapy (filtr wezlow z ustawien GatherMate2, MinimapaZadania.lua)
           out[#out + 1] = { x = x, y = y, name = name, prof = t[2], icon = texs[nodeID], skill = skill, req = req,
-            d = (req and skill) and U.gatherD(req, skill) or nil }
+            d = (req and skill) and U.gatherD(req, skill) or nil, id = nodeID, gtype = t[1] }
         end
       end
     end
@@ -58,6 +59,21 @@ local function gatherNodes(uiMapID)
   return out
 end
 U.gatherNodes = gatherNodes -- kompas u gory ekranu (Kompas.lua)
+U.GM2 = gm -- 15.11: minimapa (MinimapaZadania.lua)
+
+-- dymek wezla (mapa huba i minimapa); hint = ostatni wiersz albo nil
+function U.gatherTooltip(owner, d, hint, anchor)
+  U.TT:SetOwner(owner, anchor or "ANCHOR_RIGHT")
+  U.TT:SetText(d.name, C.gold[1], C.gold[2], C.gold[3])
+  local col = DCOL[d.d or 3]
+  if d.skill then
+    U.TT:AddLine((PROF_PL[d.prof] or d.prof) .. " " .. d.skill .. ": " .. (DTXT[d.d or 3] or "") .. (d.req and (" (od " .. d.req .. ")") or ""), col[1], col[2], col[3])
+  else
+    U.TT:AddLine("Nie masz profesji " .. (PROF_PL[d.prof] or d.prof) .. (d.req and (", od " .. d.req) or ""), C.muted[1], C.muted[2], C.muted[3])
+  end
+  if hint then U.TT:AddLine(hint, C.faint[1], C.faint[2], C.faint[3]) end
+  U.TT:Show()
+end
 
 local function gpin(i)
   local p = L.gp[i]
@@ -70,20 +86,9 @@ local function gpin(i)
   p.i:SetAllPoints()
   p:RegisterForClicks("LeftButtonUp")
   p:SetScript("OnEnter", function(self)
-    local d = self.d
-    if not d then return end
-    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    GameTooltip:SetText(d.name, C.gold[1], C.gold[2], C.gold[3])
-    local col = DCOL[d.d or 3]
-    if d.skill then
-      GameTooltip:AddLine((PROF_PL[d.prof] or d.prof) .. " " .. d.skill .. ": " .. (DTXT[d.d or 3] or "") .. (d.req and (" (od " .. d.req .. ")") or ""), col[1], col[2], col[3])
-    else
-      GameTooltip:AddLine("Nie masz profesji " .. (PROF_PL[d.prof] or d.prof) .. (d.req and (", od " .. d.req) or ""), C.muted[1], C.muted[2], C.muted[3])
-    end
-    GameTooltip:AddLine("Miejsce z bazy GatherMate2 · LPM: prowadź", C.faint[1], C.faint[2], C.faint[3])
-    GameTooltip:Show()
+    if self.d then U.gatherTooltip(self, self.d, "Miejsce z bazy GatherMate2 · LPM: prowadź") end
   end)
-  p:SetScript("OnLeave", function() GameTooltip:Hide() end)
+  p:SetScript("OnLeave", function() U.TT:Hide() end)
   p:SetScript("OnClick", function(self) if self.d then U.MAP.guide(self.d.x, self.d.y, self.d.name) end end)
   L.gp[i] = p
   return p
@@ -118,8 +123,9 @@ local function row(i)
   local hl = r:CreateTexture(nil, "HIGHLIGHT")
   hl:SetAllPoints()
   hl:SetColorTexture(1, 1, 1, 0.05)
-  r.d = U.Diamond(r, 13, C.gold, true)
-  r.d:SetPoint("TOPLEFT", 1, -5)
+  -- 15.11 (znaczniki M2-M4, M10): w wierszu ten sam znacznik co na mapie (romb zadania ze znakiem, „?”, pierscien uslugi)
+  r.zn = U.Znacznik(r, 28)
+  r.zn:SetPoint("CENTER", r, "TOPLEFT", 8, -11)
   r.ic = r:CreateTexture(nil, "ARTWORK")
   r.ic:SetSize(18, 18)
   r.ic:SetPoint("TOPLEFT", -1, -2)
@@ -147,10 +153,11 @@ local function put(n, e)
   r.t:SetText(e.title or "")
   U.Color(r.t, e.titleCol or C.text)
   r.s:SetText(e.sub or "")
-  r.d:SetShown(e.col ~= nil and not e.icon)
-  if e.col and not e.icon then r.d:Set(e.col, e.filled ~= false) end
-  r.ic:SetShown(e.icon ~= nil)
-  if e.icon then r.ic:SetTexture(e.icon) end
+  -- e.zn = rodzaj znacznika (U.ZN) z e.col, e.glyph, e.icon; bez e.zn sama ikona e.icon (ziola i ruda)
+  r.zn:SetShown(e.zn ~= nil)
+  if e.zn then r.zn:Set(e.zn, { col = e.col, glyph = e.glyph, icon = e.icon }) end
+  r.ic:SetShown(e.zn == nil and e.icon ~= nil)
+  if e.icon and not e.zn then r.ic:SetTexture(e.icon) end
   r.onClick, r.onEnter, r.onLeave = e.onClick, e.onEnter, e.onLeave
   r:ClearAllPoints()
   r:SetPoint("TOPLEFT", L.head, "BOTTOMLEFT", 0, -8 - (n - 1) * 38)
@@ -171,6 +178,18 @@ local function dist(px, py, x, y)
   return m and (U.fmtDistance(m) .. " na " .. dir) or nil
 end
 
+-- 15.11 (znaczniki M2-M4): opis znacznikow w legendzie tymi samymi teksturami co na mapie (Hub\Znaczniki.lua)
+local noteQ
+local function questNote()
+  if noteQ then return noteQ end
+  local z = U.znTex
+  local col = U.QUEST_COLORS and U.QUEST_COLORS[2] or C.gold
+  noteQ = z("zadanie", 14, col) .. " cel (kolor zadania), znak: " .. z("zabij") .. " zabij " .. z("zbierz") .. " zbierz "
+    .. z("uzyj") .. " użyj " .. z("rozmowa") .. " rozmowa " .. z("idz") .. " idź · " .. z("oddaj") .. " oddaj · "
+    .. z("wez") .. " do wzięcia (" .. z("wez_szary") .. " spoza trasy Polestara) · PPM na wierszu: Dziennik"
+  return noteQ
+end
+
 -- tryb Zadania (i Wszystko): zadania z celami na tej mapie, od najblizszego
 local function legendQuests()
   local M = U.MAP
@@ -180,12 +199,13 @@ local function legendQuests()
   local rows, seen = {}, {}
   for _, q in ipairs(quests or {}) do
     seen[q.qid] = true
-    local best, bx, by
+    local best, bx, by, bt
     for _, p in ipairs(q.pins) do
       local d2 = px and ((p.x - px) ^ 2 + (p.y - py) ^ 2) or 0
-      if not best or d2 < best then best, bx, by = d2, p.x, p.y end
+      if not best or d2 < best then best, bx, by, bt = d2, p.x, p.y, p.otype end
     end
-    rows[#rows + 1] = { qid = q.qid, title = q.title, complete = q.complete, col = q.col, x = bx, y = by, d2 = px and best or nil }
+    rows[#rows + 1] = { qid = q.qid, title = q.title, complete = q.complete, col = q.col, x = bx, y = by, d2 = px and best or nil,
+      glyph = U.ZN_TYPE[bt or ""] }
   end
   for _, q in ipairs(U.questList and U.questList() or {}) do
     if not q.header and info and q.zone == info.name and not seen[q.id] then
@@ -213,8 +233,8 @@ local function legendQuests()
     end
     if r.x and px then parts[#parts + 1] = dist(px, py, r.x, r.y)
     elseif not r.x then parts[#parts + 1] = "bez miejsca na tej mapie" end
-    put(n, { title = r.title, sub = table.concat(parts, " · "), col = r.complete and nil or (r.col or C.faint),
-      icon = r.complete and U.QUEST_DONE_ICON or nil,
+    put(n, { title = r.title, sub = table.concat(parts, " · "), zn = r.complete and "oddaj" or "zadanie",
+      col = r.col or C.faint, glyph = r.glyph,
       onClick = function(btn)
         if btn == "RightButton" or not r.x then if U.questShow then U.questShow(r.qid) end
         else M.guide(r.x, r.y, r.complete and ("Oddaj: " .. r.title) or r.title) end
@@ -223,7 +243,7 @@ local function legendQuests()
   end
   finish(n, #rows, (ok or not M.isZone(info)) and (M.isZone(info) and "Brak zadań z celami w tej strefie." or "Wejdź do strefy (LPM), żeby zobaczyć zadania.")
     or "Questie nie podał zadań: jest wyłączony albo jeszcze się wczytuje.")
-  L.note:SetText("Romb w kolorze zadania = cel · |T" .. U.QUEST_DONE_ICON .. ":14|t oddaj · |T" .. U.QUEST_AVAIL_ICON .. ":14|t do wzięcia (szary: spoza trasy Polestara) · PPM na wierszu: Dziennik")
+  L.note:SetText(questNote())
 end
 
 local function hlService(key)
@@ -239,7 +259,7 @@ end
 local function legendService()
   local M = U.MAP
   local id = M.mapID
-  L.note:SetText("Ikony jak na minimapie · nazwy ważnych zawsze, kupców od przybliżenia x2")
+  L.note:SetText("Ikony jak na minimapie, w złotym pierścieniu · nazwy ważnych zawsze, kupców od przybliżenia x2")
   if not U.servicePins then return finish(0, 0, "Brak danych postaci.") end
   U.servicePins(id, function(pins)
     if id ~= M.mapID or U.mapMode() ~= "miasto" then return end
@@ -273,7 +293,7 @@ local function legendService()
           n = n + 1
           local k, e = x.k, x.e
           put(n, { title = U.psNearbyLabel(k.key) or k.pl, sub = (e.zone or "") .. ((e.sub and e.sub ~= "") and (" · " .. e.sub) or "") .. " · " .. (U.G and U.G.tr and U.G.tr("najbliżej wg Polestara") or "najbliżej wg Polestara"),
-            icon = k.icon,
+            zn = "usluga", icon = k.icon,
             onClick = function()
               if not U.psNearbyGo(k.key) and e.map and e.x then
                 if U.G and U.G.wayTo then pcall(U.G.wayTo, e.map, tonumber(string.format("%.2f", e.x)), tonumber(string.format("%.2f", e.y)), e.name) end
@@ -294,7 +314,7 @@ local function legendService()
       n = n + 1
       local b = g.best
       local sub = (b.name or "") .. ((px and dist(px, py, b.x, b.y)) and (" · " .. dist(px, py, b.x, b.y)) or "")
-      put(n, { title = g.kind.pl .. (g.n > 1 and (" (" .. g.n .. ")") or ""), sub = sub, icon = g.kind.icon,
+      put(n, { title = g.kind.pl .. (g.n > 1 and (" (" .. g.n .. ")") or ""), sub = sub, zn = "usluga", icon = g.kind.icon,
         onClick = function() M.guide(b.x, b.y, b.name or g.kind.pl) end,
         onEnter = function() hlService(g.kind.key) end, onLeave = function() hlService(nil) end })
     end

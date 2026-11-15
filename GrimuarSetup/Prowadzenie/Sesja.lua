@@ -347,12 +347,12 @@ local function addButtons()
     hl:SetColorTexture(1, 1, 1, 0.15)
     b:SetScript("OnClick", startEnding)
     b:SetScript("OnEnter", function(self)
-      GameTooltip:SetOwner(self, "ANCHOR_TOP")
-      GameTooltip:AddLine("Kończę grę")
-      GameTooltip:AddLine("Strzałka do najbliższej karczmy. Wylogowanie tam daje odpoczynek: podwójne XP za moby w następnej sesji.", 1, 1, 1, true)
-      GameTooltip:Show()
+      G.TT:SetOwner(self, "ANCHOR_TOP")
+      G.TT:AddLine("Kończę grę")
+      G.TT:AddLine("Strzałka do najbliższej karczmy. Wylogowanie tam daje odpoczynek: podwójne XP za moby w następnej sesji.", 1, 1, 1, true)
+      G.TT:Show()
     end)
-    b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    b:SetScript("OnLeave", function() G.TT:Hide() end)
   end
 end
 

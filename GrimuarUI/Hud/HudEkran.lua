@@ -120,7 +120,8 @@ local function dropToast(t)
   K.pool[#K.pool + 1] = t
   layoutToasts()
 end
-function U.toast(title, text, col, secs, filled)
+-- 15.11 (R30 P33): onClick (opcjonalny) = wpis klikalny (alarm rzadkiego: Prowadz), po kliknieciu znika
+function U.toast(title, text, col, secs, filled, onClick)
   if not holder then
     holder = CreateFrame("Frame", "GrimuarKomunikaty", UIParent)
     holder:SetFrameStrata("MEDIUM")
@@ -145,6 +146,11 @@ function U.toast(title, text, col, secs, filled)
   t.text:SetText(text or "")
   t.rh:Set(col, filled ~= false)
   t:SetHeight(math.max(44 * kf(), 26 * kf() + t.title:GetStringHeight() + t.text:GetStringHeight()))
+  t:EnableMouse(onClick ~= nil)
+  t:SetScript("OnMouseUp", onClick and function(self)
+    pcall(onClick)
+    dropToast(self)
+  end or nil)
   K.toasts[#K.toasts + 1] = t
   layoutToasts()
   t:SetAlpha(0)

@@ -15,7 +15,19 @@ local W, R = 60, 150
 local K = { btns = {} }
 local F
 -- 15.11 (R30 P21): skroty pod kolem: { rodzaj Polestara, napis, zapas bez Polestara (funkcja GrimuarSetup), jej argument }
-local NEAR = { { "innkeeper", "Karczma", "guideInn" }, { "class", "Trener", "guideTrainer" }, { "repair", "Naprawa", "guideVendor", true } }
+local NEAR = { { "innkeeper", "Karczma", "guideInn" }, { "class", "Trener", "guideTrainer" }, { "repair", "Naprawa", "guideVendor", true },
+  { "reagents", "Reagenty" } }
+-- 15.11 (R30 P23, gracz: „teleporty maga”): runy do teleportow i portali; na kole liczba run, odnowienie i ostrzezenie
+local RUNE_TELE, RUNE_PORTAL = 17031, 17032 -- Rune of Teleportation, Rune of Portals (sprzedawca reagentow)
+local function runeFor(name)
+  if type(name) ~= "string" then return nil end
+  if name:find("^Teleport:") then return RUNE_TELE end
+  if name:find("^Portal:") then return RUNE_PORTAL end
+  return nil
+end
+local function itemCount(id)
+  return U.num(U.call(C_Item and C_Item.GetItemCount or GetItemCount, id)) or 0
+end
 
 local function known(name)
   local info = U.call(C_Spell and C_Spell.GetSpellInfo, name)
@@ -32,7 +44,10 @@ local function entries()
     local names = type(s[1]) == "table" and s[1] or { s[1] }
     for _, n in ipairs(names) do
       local info = known(n)
-      if info then out[#out + 1] = { kind = "spell", value = n, icon = info.iconID, label = s[2] } break end
+      if info then
+        out[#out + 1] = { kind = "spell", value = n, icon = info.iconID, label = s[2], spellID = info.spellID, rune = runeFor(n) }
+        break
+      end
     end
   end
   local hc = U.num(U.call(C_Item and C_Item.GetItemCount or GetItemCount, HEARTH)) or 0
@@ -60,6 +75,30 @@ local function button(i)
   b.label:SetJustifyH("CENTER")
   U.Shadow(b.label)
   b:SetScript("PostClick", function() if not InCombatLockdown() then F:Hide() end end)
+  -- 15.11 (R30 P23): odnowienie i liczba run na przycisku, dymek z opisem
+  b.cd = CreateFrame("Cooldown", nil, b, "CooldownFrameTemplate")
+  b.cd:SetAllPoints(b.icon)
+  b.cnt = U.Text(b, 13, "body", C.text, "OUTLINE")
+  b.cnt:SetPoint("BOTTOMRIGHT", -3, 3) b.cnt:SetJustifyH("RIGHT")
+  b:HookScript("OnEnter", function(self)
+    local e = self.entry
+    if not e then return end
+    local TT = U.TT
+    TT:SetOwner(self, "ANCHOR_RIGHT")
+    if e.spellID then pcall(TT.SetSpellByID, TT, e.spellID) else pcall(TT.SetItemByID, TT, HEARTH) end
+    if e.rune then
+      local n = itemCount(e.rune)
+      local rn = e.rune == RUNE_TELE and "Rune of Teleportation" or "Rune of Portals"
+      TT:AddLine(" ")
+      if n > 0 then
+        TT:AddLine(rn .. ": " .. n .. " w torbach", 0.6, 0.85, 0.6)
+      else
+        TT:AddLine("Brak " .. rn .. ". Kup u sprzedawcy reagentów (przycisk „Reagenty” pod kołem).", 1, 0.45, 0.35, true)
+      end
+    end
+    TT:Show()
+  end)
+  b:HookScript("OnLeave", function() U.TT:Hide() end)
   K.btns[i] = b
   return b
 end
@@ -111,8 +150,8 @@ local function build()
     b:SetScript("OnClick", function(self)
       if InCombatLockdown() then return end
       local ok = U.psNearbyGo and U.psNearbyGo(self.key)
-      if not ok and k[3] then
-        local fn = U.G and U.G[k[3]]
+      if not ok then
+        local fn = k[3] and U.G and U.G[k[3]]
         if fn then pcall(fn, k[4]) else U.say("nie znam drogi: " .. self.pl .. ".") end
       end
       F:Hide()
@@ -150,6 +189,22 @@ function U.koloToggle()
     b:SetAttribute(e2.kind, e2.value)
     b.icon:SetTexture(e2.icon)
     b.label:SetText(e2.label)
+    b.entry = e2
+    -- 15.11 (R30 P23): runy i odnowienie
+    local n = e2.rune and itemCount(e2.rune)
+    b.cnt:SetText(n and tostring(n) or "")
+    if n then b.cnt:SetTextColor(n > 0 and C.text[1] or 1, n > 0 and C.text[2] or 0.4, n > 0 and C.text[3] or 0.35) end
+    b.icon:SetDesaturated(n == 0)
+    b.cd:Clear()
+    pcall(function()
+      if e2.spellID and C_Spell and C_Spell.GetSpellCooldown then
+        local cd = C_Spell.GetSpellCooldown(e2.spellID)
+        if cd and cd.duration and cd.duration > 1.5 then b.cd:SetCooldown(cd.startTime, cd.duration) end
+      elseif e2.kind == "item" and C_Container and C_Container.GetItemCooldown then
+        local st, dur, en = C_Container.GetItemCooldown(HEARTH)
+        if en and dur and dur > 1.5 then b.cd:SetCooldown(st, dur) end
+      end
+    end)
     b:Show()
   end
   for i = #list + 1, #K.btns do K.btns[i]:Hide() end
@@ -161,9 +216,43 @@ function U.koloToggle()
 end
 function GrimuarKoloToggle() U.koloToggle() end
 
+-- 15.11 (R30 P23): znasz teleport, a w torbach nie ma run -> raz na sesje przypomnienie (w miescie najlatwiej kupic)
+local runeSaid
+local function runeCheck()
+  if runeSaid then return end
+  local knowsTele = false
+  for _, n in ipairs({ "Teleport: Ironforge", "Teleport: Stormwind", "Teleport: Darnassus" }) do
+    if known(n) then knowsTele = true break end
+  end
+  if not knowsTele or itemCount(RUNE_TELE) > 0 then return end
+  runeSaid = true
+  local msg = "znasz teleport, ale nie masz Rune of Teleportation. Kup kilka u sprzedawcy reagentów (koło maga › „Reagenty”)."
+  U.say(msg)
+  if U.G and U.G.showToast then pcall(U.G.showToast, "Brak run do teleportu: kup Rune of Teleportation u sprzedawcy reagentów.", "book", false) end
+end
+U.koloRuneCheck = runeCheck
+
 local ev = CreateFrame("Frame")
 ev:RegisterEvent("PLAYER_REGEN_DISABLED")
-ev:SetScript("OnEvent", function()
-  -- tuz przed blokada walki: jeszcze wolno schowac
-  if F and F:IsShown() then pcall(F.Hide, F) end
+ev:RegisterEvent("PLAYER_LOGIN")
+ev:RegisterEvent("BAG_UPDATE_DELAYED")
+ev:RegisterEvent("LEARNED_SPELL_IN_TAB")
+local pending
+ev:SetScript("OnEvent", function(_, e)
+  if e == "PLAYER_REGEN_DISABLED" then
+    -- tuz przed blokada walki: jeszcze wolno schowac
+    if F and F:IsShown() then pcall(F.Hide, F) end
+    return
+  end
+  if pending then return end
+  pending = true
+  C_Timer.After(e == "PLAYER_LOGIN" and 20 or 3, function() pending = nil pcall(runeCheck) end)
 end)
+
+U.testChecksExtra = U.testChecksExtra or {}
+table.insert(U.testChecksExtra, { "Koło maga: teleporty i runy (P23)", function()
+  local list = entries()
+  local tele, runes = 0, itemCount(RUNE_TELE)
+  for _, e in ipairs(list) do if e.rune then tele = tele + 1 end end
+  return #list .. " na kole, teleporty/portale: " .. tele .. ", runy teleportu: " .. runes
+end })

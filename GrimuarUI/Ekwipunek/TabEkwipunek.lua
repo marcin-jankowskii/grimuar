@@ -30,7 +30,7 @@ local STATS = { { "ITEM_MOD_INTELLECT_SHORT", "Intelekt" }, { "ITEM_MOD_STAMINA_
   { "RESISTANCE0_NAME", "Pancerz" }, { "ITEM_MOD_SPELL_POWER_SHORT", "Moc czarów" } }
 -- 15.11 (gracz: „w ekwipunku powinny byc co najmniej takie same kategorie jak przy postaci”): te same grupy i ta sama
 -- kolejnosc co w plecaku (GrimuarSetup Wyglad\PlecakRuny.lua, kategorie v4)
-local FILTERS = { { "all", "Wszystko" }, { "walka", "Do walki" }, { "quest", "Questy" }, { "sprzet", "Sprzęt" },
+local FILTERS = { { "all", "Wszystko" }, { "walka", "Do walki" }, { "quest", "Questy" }, { "profesje", "Profesje" }, { "sprzet", "Sprzęt" },
   { "gotowanie", "Gotowanie" }, { "tkaniny", "Tkaniny" }, { "ziola", "Zioła i ruda" }, { "receptury", "Receptury" },
   { "materialy", "Materiały" }, { "inne", "Inne" }, { "smieci", "Śmieci" } }
 local ORDER = {}
@@ -48,6 +48,8 @@ local function groupOf(it)
   if G.itemIsJunk and G.itemIsJunk(it.id, it.q) then return "smieci" end
   local c, s = it.cls, it.sub
   if c == 12 then return "quest" end
+  -- 15.11: narzedzia profesji (Mining Pick to bron) w osobnej grupie, jak w plecaku
+  if U.G and U.G.isProfTool and U.G.isProfTool(it.id) then return "profesje" end
   if c == 2 or c == 4 then return "sprzet" end
   if c == 0 or it.id == 6948 then return "walka" end
   if c == 7 then
@@ -165,13 +167,13 @@ local function eqSlot(parent, inv)
   local s = U.Slot(parent, 36)
   s.inv = inv
   s:SetScript("OnEnter", function(self)
-    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    if not pcall(GameTooltip.SetInventoryItem, GameTooltip, "player", self.inv) or not GetInventoryItemID("player", self.inv) then
-      GameTooltip:SetText(SLOT_PL[self.inv] or "")
+    U.TT:SetOwner(self, "ANCHOR_RIGHT")
+    if not pcall(U.TT.SetInventoryItem, U.TT, "player", self.inv) or not GetInventoryItemID("player", self.inv) then
+      U.TT:SetText(SLOT_PL[self.inv] or "")
     end
-    GameTooltip:Show()
+    U.TT:Show()
   end)
-  s:SetScript("OnLeave", function() GameTooltip:Hide() end)
+  s:SetScript("OnLeave", function() U.TT:Hide() end)
   S.eq[inv] = s
   return s
 end
@@ -241,11 +243,11 @@ local function gridSlot(i)
   end)
   s:SetScript("OnEnter", function(self)
     if not self.it then return end
-    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    if not (self.it.link and pcall(GameTooltip.SetHyperlink, GameTooltip, self.it.link)) then pcall(GameTooltip.SetItemByID, GameTooltip, self.it.id) end
-    GameTooltip:Show()
+    U.TT:SetOwner(self, "ANCHOR_RIGHT")
+    if not (self.it.link and pcall(U.TT.SetHyperlink, U.TT, self.it.link)) then pcall(U.TT.SetItemByID, U.TT, self.it.id) end
+    U.TT:Show()
   end)
-  s:SetScript("OnLeave", function() GameTooltip:Hide() end)
+  s:SetScript("OnLeave", function() U.TT:Hide() end)
   S.slots[i] = s
   return s
 end
@@ -310,11 +312,11 @@ local function listRow(i)
   r:SetScript("OnClick", function(self) if self.it then S.sel = self.it.id U.ekwipunekRefresh() end end)
   r:SetScript("OnEnter", function(self)
     if not self.it then return end
-    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    if not (self.it.link and pcall(GameTooltip.SetHyperlink, GameTooltip, self.it.link)) then pcall(GameTooltip.SetItemByID, GameTooltip, self.it.id) end
-    GameTooltip:Show()
+    U.TT:SetOwner(self, "ANCHOR_RIGHT")
+    if not (self.it.link and pcall(U.TT.SetHyperlink, U.TT, self.it.link)) then pcall(U.TT.SetItemByID, U.TT, self.it.id) end
+    U.TT:Show()
   end)
-  r:SetScript("OnLeave", function() GameTooltip:Hide() end)
+  r:SetScript("OnLeave", function() U.TT:Hide() end)
   S.rows[i] = r
   return r
 end
