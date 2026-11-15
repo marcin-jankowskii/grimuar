@@ -32,6 +32,18 @@ function U.trenerDraw()
     local prof = U.call(IsTradeskillTrainer)
     local classT = not prof and G.trainIsClass and U.call(G.trainIsClass)
     F.sub:SetText(prof and "trener profesji" or (classT and ("trener klasy · build: " .. tostring(G.BD_META and G.BD_META.name or "?")) or "trener"))
+    -- 15.11 (R30 P09): karty Polestara nad lista (Umiejetnosci\UmiejetnosciPolestar.lua): czary na nastepny poziom
+    -- z kosztem i gdzie trenowac nastepnym razem; tylko trener klasy, bez karty „najblizszy” dla tego trenera
+    if F.psRow then
+      local h = 0
+      if classT then
+        local okR, r = pcall(F.psRow.Draw, F.psRow, W - 44, { here = U.call(UnitName, "npc") })
+        h = okR and r or 0
+      else
+        F.psRow:Hide()
+      end
+      F.list:SetPoint("TOPLEFT", 22, h > 0 and (-104 - h) or -96)
+    end
     local buy, skip, later, have, cost = {}, {}, {}, 0, 0
     for _, s in ipairs(services()) do
       if s.kind == "available" then
@@ -107,6 +119,11 @@ local function build()
   hint:SetText("klik w wiersz: kup ten jeden · najedź: opis czaru")
   F.list = U.OknoList(F, 40, function(p) return U.OknoRow(p, 40) end)
   F.list:SetPoint("TOPLEFT", 22, -96) F.list:SetPoint("BOTTOMRIGHT", -22, 40)
+  if U.psTrainRow then
+    F.psRow = U.psTrainRow(F)
+    F.psRow:SetPoint("TOPLEFT", 22, -94)
+    F.psRow:Hide()
+  end
   F.foot = U.Text(F, 12, "body", C.muted)
   F.foot:SetPoint("BOTTOMLEFT", 24, 14)
 end

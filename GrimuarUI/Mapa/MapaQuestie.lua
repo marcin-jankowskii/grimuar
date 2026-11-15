@@ -204,6 +204,14 @@ end
 local acache = {}
 U.QUEST_AVAIL_ICON = (DONE:gsub("complete%.blp$", "available.blp"))
 U.QUEST_AVAIL_GRAY = (DONE:gsub("complete%.blp$", "available_gray.blp"))
+-- 15.11 (gracz: „przyjalem questa, a na minimapie dalej jest wykrzyknik”): Questie przelicza swoja liste z opoznieniem,
+-- wiec quest w dzienniku albo juz oddany nie jest „dostepny”, a NPC bez zadnego dostepnego questa nie dostaje „!”
+local function stillAvailable(qid)
+  if U.call(C_QuestLog and C_QuestLog.IsOnQuest, qid) then return false end
+  if U.call(C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted, qid) then return false end
+  return true
+end
+function U.availableReset() acache = {} end
 function U.availablePins(uiMapID)
   if acache.map == uiMapID and acache.list and GetTime() - acache.at < 8 then return acache.list end
   local AV, DB = mod("AvailableQuests"), mod("QuestieDB")
@@ -219,14 +227,16 @@ function U.availablePins(uiMapID)
         if type(list) == "table" then
           local quests, onRoute = {}, false
           for qid in pairs(qs) do
+            if stillAvailable(qid) then
             local title = U.call(DB.QueryQuestSingle, qid, "name") or ("#" .. tostring(qid))
             local lvl = U.num(U.call(DB.QueryQuestSingle, qid, "questLevel"))
             quests[#quests + 1] = { id = qid, title = title, level = lvl, route = route[qid] == true }
             if route[qid] then onRoute = true end
+            end
           end
           table.sort(quests, function(a, b) return (a.level or 0) < (b.level or 0) end)
           local name = U.call(DB.QueryNPCSingle, npcId, "name")
-          for _, c in ipairs(list) do
+          for _, c in ipairs(#quests > 0 and list or {}) do
             local x, y = type(c) == "table" and tonumber(c[1]), type(c) == "table" and tonumber(c[2])
             if x and y and x >= 0 and y >= 0 and x <= 100 and y <= 100 then
               out[#out + 1] = { x = x / 100, y = y / 100, name = name, quests = quests, route = onRoute }

@@ -72,8 +72,47 @@ local function arrowText(s)
   return (s:gsub("\226\128[\128-\191]", PL))
 end
 
--- Prowadzenie: najpierw strzalka Polestar (/way, prawdziwe sciezki), inaczej znacznik gry.
+-- 15.11 (R30 P18): czas dojscia z planera Polestara (Polestar.Nav.API.Estimate, Nav\Journey.lua): sekundy od gracza
+-- (z Hearthstone'em, lotami, statkami). x, y w procentach jak w wayTo. Pamiec 10 s na punkt, bo planer ma budzet
+-- 25 ms na klatke („busy”: odpowiedz w nastepnym pytaniu).
+local etaCache = {}
+local function eta(mapID, x, y)
+  local A = Polestar and Polestar.Nav and Polestar.Nav.API
+  if not (A and A.Estimate and mapID and x and y) then return nil end
+  local key = mapID .. ":" .. math.floor(x * 10) .. ":" .. math.floor(y * 10)
+  local c = etaCache[key]
+  if c and GetTime() - c.at < 10 then return c.s end
+  local ok, s = pcall(A.Estimate, nil, nil, nil, mapID, x / 100, y / 100)
+  s = ok and type(s) == "number" and s or nil
+  if s then etaCache[key] = { s = s, at = GetTime() } end
+  return s
+end
+local function etaShort(s)
+  if not s then return nil end
+  if s < 60 then return "~" .. math.max(1, math.floor(s)) .. " s" end
+  local m = math.floor(s / 60 + 0.5)
+  if m < 60 then return "~" .. m .. " min" end
+  return "~" .. math.floor(m / 60) .. " h " .. (m % 60) .. " min"
+end
+-- „ · ~3 min” do napisu przycisku albo czatu; pusty, gdy Polestar nie umie policzyc
+local function etaText(mapID, x, y)
+  local s = etaShort(eta(mapID, x, y))
+  return s and (" · " .. s) or ""
+end
+
+-- Prowadzenie: najpierw publiczne API strzalki Polestara, potem /way i TomTom, inaczej znacznik gry.
 local function wayTo(mapID, x, y, label)
+  -- 15.11 (R30 P17): Polestar.Nav.API.Navigate (jedyne ogloszone API Polestara dla innych addonow): bez /way, bez opcji
+  -- „Let other addons set waypoints” i bez /reload. Grimuar puszcza tylko swoj cel (API.Cancel w releaseArrow), a po
+  -- dojsciu konczy go sam (GrimuarUI Hub\PolestarSzyna.lua, NAV_ARRIVED).
+  local A = mapID and Polestar and Polestar.Nav and Polestar.Nav.API
+  if A and A.Navigate and x and y then
+    local okA, res = pcall(A.Navigate, "Grimuar", mapID, x / 100, y / 100, arrowText(label))
+    if okA and res then
+      say("prowadzę: " .. label .. etaText(mapID, x, y) .. ". Idź za strzałką Polestar.")
+      return true
+    end
+  end
   if mapID and SlashCmdList and SlashCmdList.POLESTARWAY then
     local okW = pcall(SlashCmdList.POLESTARWAY, string.format("#%d %.2f %.2f %s", mapID, x, y, arrowText(label)))
     if okW then
@@ -105,7 +144,15 @@ local function wayTo(mapID, x, y, label)
 end
 
 local function enablePolestarWaypoints()
+  -- 15.11 (R30 P17): z publicznym API strzalki opcja TomToma jest zbedna
+  if Polestar and Polestar.Nav and Polestar.Nav.API and Polestar.Nav.API.Navigate then return end
   if GrimuarSetupDB.polestarWayV == 1 then return end
+  -- 15.11 (R30 P02): przez Polestar.Set dziala od razu, bez /reload
+  if Polestar and Polestar.Set and Polestar.Get then
+    GrimuarSetupDB.polestarWayV = 1
+    if Polestar.Get("nav.answerTomTom") ~= true then pcall(Polestar.Set, "nav.answerTomTom", true) end
+    return
+  end
   local db = PolestarDB
   if type(db) ~= "table" then return end
   if type(db.settings) ~= "table" then db.settings = {} end
@@ -125,6 +172,12 @@ end
 -- 13.11: „/way reset” to w Polestarze Nav.ClearTarget, ktory chowa tez strzalke przewodnika do zmiany kroku,
 -- a klik w quest w przewodniku jej nie przywraca (ten sam punkt). Oddajemy wiec tylko nasz punkt: ReleaseTarget.
 local function releaseArrow()
+  -- 15.11 (R30 P17): najpierw tylko cel Grimuara z API (strzalka wraca na krok przewodnika)
+  local A = Polestar and Polestar.Nav and Polestar.Nav.API
+  if A and A.Cancel then
+    local okC, res = pcall(A.Cancel, "Grimuar")
+    if okC and res then pcall(function() C_Map.ClearUserWaypoint() end) return end
+  end
   local ok = pcall(function()
     local nav = Polestar.Nav
     if nav.Trip and nav.Trip() and nav.EndTrip then nav.EndTrip() else nav.ReleaseTarget() end
@@ -138,38 +191,23 @@ local function clearGuide()
   say("znacznik usunięty.")
 end
 
--- Trenerzy maga Przymierza: pozycje z danych Polestar (Core/ClassTrainers.lua), uiMapID jak w grze.
+-- 15.11 (R30 P30, decyzja Q6): trener maga w locie, bez przepisanej listy z danych Polestara: najpierw Polestar
+-- (Engine.NearestClassTrainer, Miejsca.lua G.classTrainerSpot), bez niego Questie (Townsfolk „Class Trainer”). Ta
+-- minimalna lista (Ironforge i Stormwind) zostaje tylko na wypadek, gdy nie ma ani Polestara, ani Questie.
+-- { imie, uiMapID, x, y, opis }
 local MAGE_TRAINERS = {
-  { "Marryk Nurribit", 1426, 28.71, 66.37, "Anvilmar, Coldridge Valley" },
-  { "Magis Sparkmantle", 1426, 47.5, 52.08, "Kharanos, browar Thunderbrew" },
   { "Bink", 1455, 27.25, 8.3, "Ironforge, Mystic Ward" },
-  { "Khelden Bremen", 1429, 49.66, 39.4, "Northshire Abbey" },
-  { "Zaldimar Wefhellt", 1429, 43.25, 66.19, "Goldshire, karczma" },
   { "Jennea Cannon", 1453, 49.56, 85.8, "Stormwind, Mage Quarter" },
 }
 local NEAR_SW = { [1429] = true, [1436] = true, [1433] = true, [1431] = true, [1453] = true }
 
 local function nearestTrainer()
+  local ok, t = pcall(function() return G.classTrainerSpot and G.classTrainerSpot() end)
+  if ok and type(t) == "table" and t[2] and t[3] then return t end
   local here
   pcall(function() here = C_Map.GetBestMapForUnit("player") end)
-  local best, bestD
-  if here then
-    local px, py
-    pcall(function()
-      local pos = C_Map.GetPlayerMapPosition(here, "player")
-      if pos then px, py = pos:GetXY() end
-    end)
-    for _, t in ipairs(MAGE_TRAINERS) do
-      if t[2] == here then
-        local d = 0
-        if px and py then d = (t[3] / 100 - px) ^ 2 + (t[4] / 100 - py) ^ 2 end
-        if not bestD or d < bestD then best, bestD = t, d end
-      end
-    end
-  end
-  if best then return best end
-  if here and NEAR_SW[here] then return MAGE_TRAINERS[6] end
-  return MAGE_TRAINERS[3]
+  if here and NEAR_SW[here] then return MAGE_TRAINERS[2] end
+  return MAGE_TRAINERS[1]
 end
 
 local function guideTrainer()
@@ -343,6 +381,9 @@ G.GUIDE = GUIDE
 G.mapIds = mapIds
 G.findMapId = findMapId
 G.wayTo = wayTo
+G.eta = eta
+G.etaShort = etaShort
+G.etaText = etaText
 G.enablePolestarWaypoints = enablePolestarWaypoints
 G.guideTo = guideTo
 G.clearGuide = clearGuide

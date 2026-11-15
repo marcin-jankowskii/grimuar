@@ -1,5 +1,26 @@
 # Changelog
 
+## GrimuarSetup 5.9.0 · GrimuarUI 0.18.0 (2026-11-15)
+Polestar integration, research R30 (read-only, every call guarded; without Polestar Grimuar works as before).
+- **Foundation:** "Guide" buttons use Polestar's public arrow API (`Polestar.Nav.API`): no `/way`, no TomTom option,
+  no `/reload`, and Grimuar releases its target on arrival. Travel time from Polestar's route planner on guide buttons,
+  trainer and vendor cards and next to the compass target. Grimuar listens to Polestar's messages (step, waypoint,
+  guide) instead of polling, and changes Polestar settings through `Polestar.Set` (no `/reload`).
+- **Fix:** guide coordinates in the Era map frame are converted to the live Forever map (`Nav.LiveCoords`), so "Guide"
+  no longer points next to the target on rebuilt maps.
+- **Quick wins:** route pace on the pace bar ("To 24: −3 bars · hard quest"), "While you're here" and "Behind you"
+  in the Journal and on the compass, ◆ "step N" for items later route steps need (never sold as junk), spells per
+  level with cost and the nearest trainer, exact riding cost with the Honored discount, dungeon quest XP and the
+  instance lockout counter in Expeditions.
+- **Cards:** upgrades ahead on the route (Equipment, Grimuar tab), dungeon "Collect quests" / "Turn in after" /
+  attunements, "Where to get it" with "Guide me to it" on item cards, mage class quests, nearest services with travel
+  time (map, mage wheel, belt), a "Now (Polestar)" card with goal icons and progress.
+- Trainers and NPCs come from Polestar at run time instead of copied lists (Questie as fallback). Grimuar turns off
+  Polestar's own dungeon heads-up card (Grimuar shows it).
+- Fixes from play-testing: the compass no longer disappears for good (negative frame level with many markers), the
+  dialogue window no longer stays empty after Polestar auto-accepts a quest, accepted quests lose their "!" on the
+  minimap at once, the quick belt sits higher, the Equipment tab has the same categories as the bags.
+
 ## GrimuarSetup 5.8.0 · GrimuarUI 0.17.0 (2026-11-15)
 - **Self-test covers the new windows** (`/gr test`): merchant, trainer, mail and bank record the raw values of the first
   visit (`GrimuarUIDB.diag`) and the test checks their order, bank tabs, unknown CVars, key binding and macro API, hub

@@ -14,6 +14,8 @@ local HEARTH = 6948
 local W, R = 60, 150
 local K = { btns = {} }
 local F
+-- 15.11 (R30 P21): skroty pod kolem: { rodzaj Polestara, napis, zapas bez Polestara (funkcja GrimuarSetup), jej argument }
+local NEAR = { { "innkeeper", "Karczma", "guideInn" }, { "class", "Trener", "guideTrainer" }, { "repair", "Naprawa", "guideVendor", true } }
 
 local function known(name)
   local info = U.call(C_Spell and C_Spell.GetSpellInfo, name)
@@ -98,6 +100,38 @@ local function build()
   end)
   F:SetScript("OnShow", function(self) if not InCombatLockdown() then self:EnableKeyboard(true) pcall(self.SetPropagateKeyboardInput, self, true) end end)
   F:SetScript("OnHide", function(self) if not InCombatLockdown() then self:EnableKeyboard(false) end end)
+  -- 15.11 (R30 P21, Q6): skroty do najblizszych uslug pod kolem. Zwykle przyciski (nie SecureActionButton), wiec nie
+  -- ruszaja bezpiecznych przyciskow czarow; klik: Polestar prowadzi (Nav.nearby.Go), bez niego Questie (G.guideInn...).
+  F.near = {}
+  local prev
+  for i, k in ipairs(NEAR) do
+    local b = U.Button(F, k[2], nil, 26)
+    if prev then b:SetPoint("LEFT", prev, "RIGHT", 6, 0) else b:SetPoint("TOP", F, "BOTTOM", 0, -4) end
+    b.key, b.pl = k[1], k[2]
+    b:SetScript("OnClick", function(self)
+      if InCombatLockdown() then return end
+      local ok = U.psNearbyGo and U.psNearbyGo(self.key)
+      if not ok and k[3] then
+        local fn = U.G and U.G[k[3]]
+        if fn then pcall(fn, k[4]) else U.say("nie znam drogi: " .. self.pl .. ".") end
+      end
+      F:Hide()
+    end)
+    F.near[i] = b
+    prev = b
+  end
+end
+
+-- napisy skrotow: „Karczma · ~2 min” z pamieci Polestara; rzad wysrodkowany pod kolem
+local function nearLabels()
+  if not (F and F.near) then return end
+  local w = 0
+  for _, b in ipairs(F.near) do
+    b:SetLabel((U.psNearbyLabel and U.psNearbyLabel(b.key, true)) or b.pl)
+    w = w + b:GetWidth() + 6
+  end
+  F.near[1]:ClearAllPoints()
+  F.near[1]:SetPoint("TOPLEFT", F, "BOTTOM", -math.floor((w - 6) / 2), -4)
 end
 
 function U.koloToggle()
@@ -120,6 +154,10 @@ function U.koloToggle()
   end
   for i = #list + 1, #K.btns do K.btns[i]:Hide() end
   F:Show()
+  pcall(nearLabels)
+  if U.psNearbyQueue then
+    U.psNearbyQueue({ "innkeeper", "class", "repair" }, function() if F:IsShown() then pcall(nearLabels) end end)
+  end
 end
 function GrimuarKoloToggle() U.koloToggle() end
 

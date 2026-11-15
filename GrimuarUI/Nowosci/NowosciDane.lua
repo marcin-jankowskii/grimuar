@@ -9,6 +9,14 @@
 local ADDON, U = ...
 
 U.NOWOSCI_GRIMUAR = {
+  { ver = "0.18 / 5.9", date = "15.11.2026", title = { pl = "Polestar w Grimuarze", en = "Polestar in Grimuar" }, items = {
+    { pl = "„Prowadź” przez strzałkę Polestara, z czasem dojścia; po dojściu strzałka sama wraca do przewodnika.", en = "Guide buttons use Polestar's arrow with travel time; the arrow returns to the guide on arrival." },
+    { pl = "Poprawka: „Prowadź” z poradników trafia w punkt także na przebudowanych mapach Forever.", en = "Fix: guide targets land on the spot on rebuilt Forever maps too." },
+    { pl = "Tempo trasy na pasku, „Przy okazji” i „Za Tobą”, ◆ „krok N” w torbach (nie sprzeda się jako śmieć).", en = "Route pace on the bar, While you're here / Behind you, ◆ step N in bags (never sold as junk)." },
+    { pl = "Czary na poziom z kosztem i najbliższy trener, dokładny koszt jazdy, XP z questów lochu i limit wejść.", en = "Spells per level with cost and the nearest trainer, exact riding cost, dungeon quest XP and lockouts." },
+    { pl = "Karty: ulepszenia przed Tobą, lochy (zbierz i oddaj questy), „Skąd zdobyć”, questy klasowe, usługi w pobliżu, „Teraz wg Polestara”.", en = "Cards: upgrades ahead, dungeon quests, where to get it, class quests, nearby services, Now (Polestar)." },
+    { pl = "Poprawki z gry: kompas nie znika, okno rozmowy nie zostaje puste, „!” znika po przyjęciu questa, pas wyżej, kategorie ekwipunku jak w plecaku.", en = "Play-test fixes: compass stays, dialogue window no longer empty, ! disappears after accepting, belt higher, equipment categories like the bags." },
+  } },
   { ver = "0.17 / 5.8", date = "15.11.2026", title = { pl = "Poradnik przy profesji, łup jako karty, PvP", en = "Guide by the profession window, loot cards, PvP" }, items = {
     { pl = "Przy oknie profesji panel poradnika Polestara: pasek do progu, „Zrób N”, składniki z bankiem, ceną z aukcji i sprzedawcą.", en = "Polestar guide panel by the profession window: skill bar, Make N, reagents with bank, auction price and vendor." },
     { pl = "Łup jako karty z powodem (◆ do poradnika, ulepszenie wg Pawna); rzuty w grupie z podpowiedzią i przyciskami, nic nie rzuca samo.", en = "Loot as cards with a reason; group rolls with advice and buttons, nothing rolls by itself." },

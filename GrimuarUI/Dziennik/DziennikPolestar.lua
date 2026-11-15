@@ -57,11 +57,14 @@ function U.polestarQuests()
               if q then
                 d.inGuide[q] = true
                 if si == cur and not d.now[q] then d.now[q] = { guide = gtitle } end
-                if goal.map and goal.x and goal.y then
+                -- 15.11 (R30): ramka Era (goal.f) przeliczona na biezaca mape Forever (U.psLive, RzemiosloPolestar.lua)
+                local lm, lx, ly = goal.map, goal.x, goal.y
+                if goal.f and U.psLive then lm, lx, ly = U.psLive(goal) end
+                if lm and lx and ly then
                   local key = goal.t == "turnin" and "turnin" or (goal.t == "accept" and "accept" or "obj")
                   d.loc[q] = d.loc[q] or {}
                   if not d.loc[q][key] then
-                    d.loc[q][key] = { map = goal.map, x = goal.x / 100, y = goal.y / 100, name = plain(goal.npcName) }
+                    d.loc[q][key] = { map = lm, x = lx / 100, y = ly / 100, name = plain(goal.npcName) }
                   end
                 end
                 if goal.t == "accept" and not seen[q] and #d.take < 12 and (goal.minLevel or 0) <= l + 1
@@ -69,7 +72,7 @@ function U.polestarQuests()
                   seen[q] = true
                   local stepNo = (E.StepNumberOf and U.call(E.StepNumberOf, g, si)) or si
                   d.take[#d.take + 1] = { qid = q, title = plain(goal.title) or ("#" .. q), npc = plain(goal.npcName),
-                    map = goal.map, x = goal.x and goal.x / 100, y = goal.y and goal.y / 100, guide = gtitle, step = stepNo,
+                    map = lm, x = lx and lx / 100, y = ly and ly / 100, guide = gtitle, step = stepNo,
                     note = plain(st.note) or plain(goal.note), minLevel = goal.minLevel or goal.qlvl, now = si == cur,
                     reward = plain(goal.reward) }
                 end

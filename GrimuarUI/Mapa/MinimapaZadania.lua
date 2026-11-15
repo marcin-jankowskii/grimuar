@@ -85,13 +85,18 @@ local function queue(delay)
 end
 
 local ev = CreateFrame("Frame")
-for _, e in ipairs({ "PLAYER_LOGIN", "ZONE_CHANGED_NEW_AREA", "QUEST_LOG_UPDATE", "QUEST_TURNED_IN", "PLAYER_LEVEL_UP" }) do
+for _, e in ipairs({ "PLAYER_LOGIN", "ZONE_CHANGED_NEW_AREA", "QUEST_LOG_UPDATE", "QUEST_TURNED_IN", "PLAYER_LEVEL_UP",
+  "QUEST_ACCEPTED", "QUEST_REMOVED" }) do
   pcall(ev.RegisterEvent, ev, e)
 end
 ev:SetScript("OnEvent", function(_, event)
   if event == "PLAYER_LOGIN" then
     C_Timer.After(12, function() pcall(update) end)
     C_Timer.NewTicker(10, function() pcall(update) end)
+  elseif event == "QUEST_ACCEPTED" or event == "QUEST_TURNED_IN" or event == "QUEST_REMOVED" then
+    -- 15.11: przyjety albo oddany quest znika z minimapy od razu (bez 8 s pamieci listy)
+    if U.availableReset then U.availableReset() end
+    queue(0.3)
   else
     queue(event == "QUEST_LOG_UPDATE" and 2 or 1)
   end

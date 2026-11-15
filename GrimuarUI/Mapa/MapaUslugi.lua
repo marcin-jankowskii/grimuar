@@ -183,3 +183,137 @@ function U.serviceDirectory(fn)
     fn(groups)
   end)
 end
+
+-- ---------- 15.11 (R30 P21, decyzja Q6): najblizsze uslugi z czasem dojscia z Polestara ----------
+-- Polestar.Nav.nearby.Find(rodzaj) (Nav\\Nearby.lua:433 -> place { id, name, sub, map, x, y, f }, sekundy dojscia z planera)
+-- i na klik Nav.nearby.Go(rodzaj) (Nearby.lua:462: strzalka i „wycieczka” Polestara, ktora konczy sie sama po dojsciu).
+-- Find wczytuje Codex Polestara (tylko poza walka) i pyta planer o czas kilku kandydatow, wiec liczymy dopiero po otwarciu
+-- trybu Miasto na mapie huba, Kola maga albo przy braku picia w Pasie, po jednym rodzaju na raz (co 0,1 s), w pamieci
+-- 60 s. Bez Polestara albo gdy nie zna: Questie (wiersze z mapy jak dotad, w Kole i Pasie G.guideInn / G.guideVendor).
+local G = U.G or {}
+local function tr(s) return (G.tr and type(s) == "string") and G.tr(s) or s end -- tlumaczenie kawalkow (jezyk huba)
+local NEAR = { cache = {}, queue = {}, cbs = {}, busy = false }
+local NEAR_TTL = 60
+U.NEARBY_KINDS = {
+  { key = "repair", pl = "Naprawa", icon = T .. "repair", questie = "Repair" },
+  { key = "innkeeper", pl = "Karczma", icon = T .. "innkeeper", questie = "Innkeeper" },
+  { key = "class", pl = "Trener klasy", icon = T .. "class", questie = "Class Trainer" },
+  { key = "flight", pl = "Mistrz lotów", icon = T .. "flightmaster", questie = "Flight Master" },
+  { key = "mailbox", pl = "Poczta", icon = T .. "mailbox", questie = "Mailbox" },
+  { key = "bank", pl = "Bank", icon = T .. "banker", questie = "Banker" },
+  { key = "auction", pl = "Dom aukcyjny", icon = T .. "auctioneer", questie = "Auctioneer" },
+  { key = "reagents", pl = "Odczynniki", icon = T .. "reagents", questie = "Reagents" },
+  { key = "food", pl = "Jedzenie i picie", icon = "Interface\\Icons\\INV_Drink_07" },
+}
+local NEAR_BY = {}
+for _, k in ipairs(U.NEARBY_KINDS) do NEAR_BY[k.key] = k end
+local function nearbyApi()
+  local N = _G.Polestar and _G.Polestar.Nav and _G.Polestar.Nav.nearby
+  return (N and type(N.Find) == "function") and N or nil
+end
+local function zoneOf(map)
+  local i = map and U.call(C_Map.GetMapInfo, map)
+  return type(i) == "table" and i.name or nil
+end
+function U.psNearbyKind(key) return NEAR_BY[key] end
+function U.psNearbyHas() return nearbyApi() ~= nil end
+
+local function nearCompute(key)
+  local N = nearbyApi()
+  if not N then return nil, "nopolestar" end
+  local ok, place, s = pcall(N.Find, key)
+  if not ok then return nil, "error" end
+  if type(place) ~= "table" then return nil, s end
+  local m, x, y = place.map, place.x, place.y
+  if U.psLive then m, x, y = U.psLive(place) end
+  return { name = place.name or "?", sub = place.sub, map = m, x = U.num(x), y = U.num(y), s = U.num(s), zone = zoneOf(place.map) }
+end
+
+-- z pamieci (bez liczenia): { name, sub, map, x, y, s, zone } albo nil
+function U.psNearby(key)
+  local c = NEAR.cache[key]
+  if c and GetTime() - c.at < NEAR_TTL then return c.d end
+  return nil
+end
+-- „Naprawa: Bixi · ~1 min” albo nil
+function U.psNearbyLabel(key, short)
+  local e, k = U.psNearby(key), NEAR_BY[key]
+  if not (e and k) then return nil end
+  local eta = e.s and G.etaShort and U.call(G.etaShort, e.s)
+  return (short and tr(k.pl) or (tr(k.pl) .. ": " .. e.name)) .. (eta and (" · " .. eta) or "")
+end
+
+-- liczy brakujace i stare rodzaje po kolei; cb() po kazdym policzonym
+function U.psNearbyQueue(keys, cb)
+  -- w walce Codex Polestara sie nie wczyta (Find: „combat”): nic nie liczymy, inaczej odswiezanie krecilo by sie w kolko
+  if not nearbyApi() or InCombatLockdown() then return end
+  if cb then NEAR.cbs[cb] = true end
+  for _, k in ipairs(keys) do
+    local key = type(k) == "table" and k.key or k
+    local c = NEAR.cache[key]
+    if not (c and GetTime() - c.at < NEAR_TTL) and not NEAR.queue[key] then
+      NEAR.queue[key] = true
+      NEAR.queue[#NEAR.queue + 1] = key
+    end
+  end
+  if NEAR.busy or #NEAR.queue == 0 then return end
+  NEAR.busy = true
+  local function step()
+    local key = table.remove(NEAR.queue, 1)
+    if not key then
+      NEAR.busy = false
+      NEAR.cbs = {}
+      return
+    end
+    NEAR.queue[key] = nil
+    local d, why = nearCompute(key)
+    -- „combat”: Codex Polestara w walce sie nie wczyta, sprobujemy przy nastepnym otwarciu
+    if why ~= "combat" then NEAR.cache[key] = { at = GetTime(), d = d, why = why } end
+    for fn in pairs(NEAR.cbs) do pcall(fn, key) end
+    C_Timer.After(0.1, step)
+  end
+  C_Timer.After(0, step)
+end
+
+-- klik: Polestar prowadzi (strzalka i wycieczka); false, gdy Polestara nie ma albo nie zna
+function U.psNearbyGo(key)
+  local N = nearbyApi()
+  if not (N and type(N.Go) == "function") then return false end
+  local ok, res = pcall(N.Go, key)
+  if ok and res then
+    if U.IsOpen and U.IsOpen() then U.Close() end
+    return true
+  end
+  return false
+end
+
+local nearEv = CreateFrame("Frame")
+pcall(nearEv.RegisterEvent, nearEv, "ZONE_CHANGED_NEW_AREA")
+pcall(nearEv.RegisterEvent, nearEv, "PLAYER_LOGIN")
+nearEv:SetScript("OnEvent", function(_, e)
+  -- szyna Polestara (Hub\PolestarSzyna.lua) laduje sie pozniej w TOC: zapis po wczytaniu wszystkiego
+  if e == "PLAYER_LOGIN" then
+    if U.onPolestar then U.onPolestar({ "CODEX_LOADED" }, function() NEAR.cache = {} end) end
+    return
+  end
+  NEAR.cache = {}
+end)
+
+U.testChecksExtra = U.testChecksExtra or {}
+table.insert(U.testChecksExtra, { "Polestar: najbliższe usługi (Nav.nearby.Find, Go)", function()
+  local N = nearbyApi()
+  if not _G.Polestar then return "brak Polestara (usługi z Questie jak dotąd)" end
+  if not N then error("brak Polestar.Nav.nearby.Find (Nav\\Nearby.lua:433)") end
+  if type(N.Go) ~= "function" then error("brak Polestar.Nav.nearby.Go (Nav\\Nearby.lua:462)") end
+  local ok, place, s = pcall(N.Find, "class")
+  if not ok then error("Find(class): " .. tostring(place)) end
+  local parts = { "trener klasy: " .. (type(place) == "table" and (tostring(place.name) .. (U.num(s) and (", " .. math.floor(s) .. " s") or "")) or ("brak (" .. tostring(s) .. ")")) }
+  local X = _G.Polestar.Codex
+  if X and U.call(X.IsLoaded) then
+    local okR, pr, sr = pcall(N.Find, "repair")
+    parts[#parts + 1] = "naprawa: " .. ((okR and type(pr) == "table") and (tostring(pr.name) .. (U.num(sr) and (", " .. math.floor(sr) .. " s") or "")) or ("brak (" .. tostring(sr) .. ")"))
+  else
+    parts[#parts + 1] = "reszta usług po wczytaniu Codexu (tryb Miasto, Koło maga)"
+  end
+  return table.concat(parts, "; ")
+end })

@@ -44,6 +44,21 @@ end
 U.psText = psText
 U.SKILL_PL = SKILL_PL
 
+-- 15.11 (R30): wspolrzedne celow poradnika bywaja w ramce Era (pole f = "e", ok. 4300 celow w Polestar_Guides).
+-- Na mapach przebudowanych w Forever trzeba je przeliczyc na biezaca mape (Polestar.Nav.LiveCoords, Nav\Nav.lua),
+-- inaczej strzalka „Prowadz” wskazuje obok. Bez pola f albo bez Polestara: wspolrzedne bez zmian.
+function U.psLive(p)
+  if type(p) ~= "table" then return nil end
+  if p.f then
+    local N = PS() and PS().Nav
+    if N and N.LiveCoords then
+      local ok, m, x, y = pcall(N.LiveCoords, p)
+      if ok and m and x then return m, x, y end
+    end
+  end
+  return p.map, p.x, p.y
+end
+
 function U.psProfGuide(prof)
   local P = PS()
   local id = prof and IDS[prof] and ("forever/professions/" .. IDS[prof])
@@ -99,8 +114,11 @@ local function stepCard(st, rank, sec, guide)
     elseif t == "train" or t == "learn" or t == "buy" then
       local c = candidate(g)
       if c then
-        subs[#subs + 1] = (t == "buy" and "sprzedawca: " or "trener: ") .. (c.npcName or "?") .. (mapName(c.map) and (", " .. mapName(c.map)) or "") .. " · klik: prowadź"
-        card.go = card.go or { c.map, c.x, c.y, c.npcName or st.title }
+        local m, x, y = U.psLive(c)
+        -- 15.11 (R30 P18): czas dojscia z planera Polestara
+        local eta = (m and x and G.etaText) and G.etaText(m, x, y) or ""
+        subs[#subs + 1] = (t == "buy" and "sprzedawca: " or "trener: ") .. (c.npcName or "?") .. (mapName(c.map) and (", " .. mapName(c.map)) or "") .. eta .. " · klik: prowadź"
+        card.go = card.go or { m, x, y, c.npcName or st.title }
       end
       if t == "train" and U.num(g.rankMax) and rank > 0 then
         local s = (U.call(G.readProfs) or {})[g.skill or ""]
@@ -108,7 +126,8 @@ local function stepCard(st, rank, sec, guide)
       end
     elseif t == "goto" then
       if g.map and g.x then
-        card.go = card.go or { g.map, g.x, g.y, g.text or st.title }
+        local m, x, y = U.psLive(g)
+        card.go = card.go or { m, x, y, g.text or st.title }
         subs[#subs + 1] = (g.text or mapName(g.map) or "miejsce") .. " · klik: prowadź"
       end
     elseif t == "skill" then

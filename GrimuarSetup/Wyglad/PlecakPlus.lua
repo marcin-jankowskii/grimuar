@@ -2,7 +2,8 @@
 -- Na Baganatorze, wylacznie przez jego publiczne API (przyciski przedmiotow zostaja jego, bezpieczne w walce):
 -- * znaki gracza: ulubione (nigdy do smieci) i smiec (GrimuarSetupDB.itemMarks[itemID] = "fav" | "junk"), ustawiane
 --   w hubie (Ekwipunek > karta przedmiotu) albo Alt+prawy klik na przedmiocie w plecaku (tylko poza walka);
--- * znaczki w rogach: ◆ potrzebne (skladnik kroku poradnika profesji Polestara, G.psNeededItems z GrimuarUI) i ★ ulubione;
+-- * znaczki w rogach: ◆ potrzebne (skladnik kroku poradnika profesji Polestara, G.psNeededItems z GrimuarUI, a od 15.11
+--   takze przedmiot dalszego kroku trasy Polestara: Engine.KeptItems, „krok N” w dymku) i ★ ulubione;
 -- * wtyczka smieci „Grimuar”: szare przedmioty i oznaczone jako smiec, ale nigdy ulubione ani potrzebne;
 -- * pasek na dole plecaka: „Sprzedaj smieci (N, wartosc)” przy kupcu, „Odloz materialy” i „Kompaktuj” przy banku,
 --   „W hubie”; sprzedaz i przenoszenie przez C_Container.UseContainerItem tylko z klikniecia, do 12 na klik;
@@ -18,6 +19,35 @@ local function refreshBags()
 end
 
 -- ---------- potrzebne (cache 5 s) ----------
+-- 15.11 (R30 P08): takze przedmioty, ktorych trasa Polestara potrzebuje w dalszych krokach (Polestar.Engine.KeptItems,
+-- Core\Engine.lua:11484: { [itemID] = pierwszy krok }, numer kroku jak u gracza: Engine.StepNumber). ◆ w torbie i linia
+-- „krok N” w dymku; smieci Grimuara (reczne i automatyczne u kupca) nigdy ich nie sprzedaja, nawet oznaczonych jako smiec.
+-- Bez Polestara: jak dotad, tylko poradniki profesji.
+local routeCache, routeAt = {}, -100
+local function routeKept()
+  if GetTime() - routeAt < 5 then return routeCache end
+  local t = {}
+  local E = Polestar and Polestar.Engine
+  if E and type(E.KeptItems) == "function" then
+    local ok, items = pcall(E.KeptItems)
+    if ok and type(items) == "table" then
+      for id, s in pairs(items) do
+        if type(id) == "number" and type(s) == "number" then
+          local n = s
+          if type(E.StepNumber) == "function" then
+            local okN, num = pcall(E.StepNumber, s)
+            if okN and type(num) == "number" then n = num end
+          end
+          t[id] = n
+        end
+      end
+    end
+  end
+  routeCache, routeAt = t, GetTime()
+  return t
+end
+G.itemRouteStep = function(id) return id and routeKept()[id] or nil end
+
 local needCache, needAt = {}, -100
 local function needed()
   if GetTime() - needAt < 5 then return needCache end
@@ -25,6 +55,10 @@ local function needed()
   if G.psNeededItems then
     local ok, r = pcall(G.psNeededItems)
     if ok and type(r) == "table" then for k, v in pairs(r) do t[k] = v end end
+  end
+  for id, n in pairs(routeKept()) do
+    local txt = (G.tr and G.tr("trasa Polestara: krok " .. n)) or ("trasa Polestara: krok " .. n)
+    t[id] = t[id] and (t[id] .. "; " .. txt) or txt
   end
   needCache, needAt = t, GetTime()
   return t
@@ -50,6 +84,8 @@ function G.itemIsJunk(id, q)
   if not id then return false end
   local m = marks()[id]
   if m == "fav" then return false end
+  -- 15.11 (R30 P08): potrzebne trasie Polestara nigdy nie ida do smieci (Polestar tez ich nie sprzedaje, QoL\Keep.lua)
+  if routeKept()[id] then return false end
   if m == "junk" then return true end
   if needed()[id] then return false end
   return q == 0
@@ -74,10 +110,17 @@ function G.junkList()
   pcall(eachBagItem, function(bag, slot, info)
     if not info.isLocked and G.itemIsJunk(info.itemID, info.quality) then
       local v = sellPrice(info.itemID) * (info.stackCount or 1)
-      if v > 0 then list[#list + 1] = { bag, slot, v } value = value + v end
+      if v > 0 then list[#list + 1] = { bag, slot, v, info.itemID } value = value + v end
     end
   end)
   return list, value
+end
+-- 15.11 (R30 P08): ostatnie sprawdzenie tuz przed sprzedaza, na zywo (Polestar.QoL.Kept, QoL\Keep.lua:23 -> krok albo nil)
+local function keptNow(id)
+  local Q = Polestar and Polestar.QoL
+  if not (id and Q and type(Q.Kept) == "function") then return false end
+  local ok, s = pcall(Q.Kept, id)
+  return ok and s ~= nil
 end
 local function moneyText(c)
   c = math.floor(c or 0)
@@ -98,8 +141,10 @@ local function sellJunk()
   local n = 0
   for _, it in ipairs(list) do
     if n >= 12 then break end
-    pcall(C_Container.UseContainerItem, it[1], it[2])
-    n = n + 1
+    if not keptNow(it[4]) then
+      pcall(C_Container.UseContainerItem, it[1], it[2])
+      n = n + 1
+    end
   end
   if n > 0 then say("sprzedane śmieci: " .. n .. (n < #list and (" (zostało " .. (#list - n) .. ", kliknij jeszcze raz)") or "") .. ", ok. " .. moneyText(value) .. ".")
   else say("nie ma śmieci do sprzedania.") end
@@ -120,10 +165,17 @@ local function autoSell()
     local n = 0
     for _, it in ipairs(list) do
       if n >= 12 then break end
-      pcall(C_Container.UseContainerItem, it[1], it[2])
-      n, value = n + 1, value + it[3]
+      if not keptNow(it[4]) then
+        pcall(C_Container.UseContainerItem, it[1], it[2])
+        n, value = n + 1, value + it[3]
+      end
     end
     sold = sold + n
+    if n == 0 then
+      -- zostaly tylko potrzebne trasie (QoL.Kept): koniec
+      if sold > 0 then say("sprzedane śmieci: " .. sold .. " za ok. " .. moneyText(value) .. " (★ ulubione i ◆ potrzebne zostają).") end
+      return
+    end
     C_Timer.After(0.4, function() batch(round + 1) end)
   end
   C_Timer.After(0.3, function() batch(1) end)
@@ -250,7 +302,7 @@ local function register()
     end)
   end
   if A.RegisterCornerWidget then
-    A.RegisterCornerWidget("Grimuar: potrzebne (poradnik profesji)", "grimuar_need", function(_, details)
+    A.RegisterCornerWidget("Grimuar: potrzebne (poradnik profesji, trasa Polestara)", "grimuar_need", function(_, details)
       if not details.itemID then return nil end
       return G.itemNeed(details.itemID) ~= nil
     end, function(button) return cornerDiamond(button, 0.49, 0.88, 0.49) end, { corner = "bottom_left", priority = 1 })
@@ -327,7 +379,8 @@ ev:SetScript("OnEvent", function(_, e)
     end
     return
   end
-  if e == "MERCHANT_SHOW" then K.merchant = true pcall(autoSell) elseif e == "MERCHANT_CLOSED" then K.merchant = false
+  -- 15.11 (R30 P08): u kupca swieza lista potrzebnych trasie (bez 5-sekundowej pamieci)
+  if e == "MERCHANT_SHOW" then K.merchant = true routeAt, needAt = -100, -100 pcall(autoSell) elseif e == "MERCHANT_CLOSED" then K.merchant = false
   elseif e == "BANKFRAME_OPENED" then K.bank = true elseif e == "BANKFRAME_CLOSED" then K.bank = false end
   if bar then C_Timer.After(0.2, function() pcall(G.plecakBarUpdate) end) end
 end)

@@ -75,19 +75,21 @@ local function nearLoc(loc, maxD)
   return near
 end
 
--- Klucz = tekst zadania z STAGES. Pozycje NPC z danych Polestar (Core/ClassTrainers.lua i baza questow).
+-- Klucz = tekst zadania z STAGES. 15.11 (R30 P30, decyzja Q6): bez przepisanych wspolrzednych; loc to { npc = id } albo
+-- { trainer = linia profesji } z opisem, a miejsce daje w locie Polestar (Codex, Nav.nearby), bez niego Questie
+-- (Miejsca.lua G.resolveLoc). Codex Polestara wczytuje dopiero klik w Prowadz.
 local TODO_HELP = {
   -- R13 (13.11): Fishing tylko do 20, dla obiektu Fish Bowl przy ognisku
   ["Fishing do 20: Fish Bowl przy ognisku (+8% statystyk)"] = {
     how = "Trener Paxton Ganter nad Iceflow Lake w Dun Morogh, wędka u sprzedawcy obok. Łów, aż Fishing dojdzie do 20, potem możesz przestać. Fish Bowl stawiasz przy ognisku (1 obiekt na gracza, 1 h odnowienia).",
-    loc = { 1426, 35.6, 40.4, "Paxton Ganter: Fishing" } },
+    loc = { trainer = 356, label = "Fishing" } },
   -- R10 (13.11): jazda na 40
   ["Apprentice Riding i mechanostrider"] = {
     how = "Steelgrill's Depot w Dun Morogh: trener jazdy i sprzedawca mechanostriderów. 100 g, przy Honored z Gnomeregan 90 g. Wierzchowca daje quest u sprzedawcy.",
-    loc = { 1426, 49.0, 48.0, "Steelgrill's Depot: jazda" } },
+    loc = { npc = 7954, label = "Steelgrill's Depot: jazda" } }, -- Binjy Featherwhistle
   ["Hearthstone przypisany w Kharanos"] = {
     how = "Porozmawiaj z karczmarzem Innkeeper Belm w karczmie Thunderbrew w Kharanos i wybierz Make this inn your home. Hearthstone z torby przeniesie Cię tu raz na godzinę.",
-    loc = { 1426, 47.38, 52.52, "Innkeeper Belm, Kharanos" },
+    loc = { npc = 1247, label = "Innkeeper Belm, Kharanos" },
     done = function()
       local b = (GetBindLocation and GetBindLocation()) or ""
       return b == "Kharanos" or b == "Thunderbrew Distillery"
@@ -95,9 +97,9 @@ local TODO_HELP = {
   ["First Aid, Herbalism i Mining u trenerów"] = {
     how = "Porozmawiaj z trenerem profesji i kliknij Train. First Aid: Thamner Pol w karczmie w Kharanos. Mining: Yarr Hammerstone w Kharanos. Herbalism: Reyna Stonebranch w Ironforge. Prowadź wskaże najbliższego, którego jeszcze nie masz.",
     loc = function()
-      if not haveSpell("First Aid") then return { 1426, 47.18, 52.61, "Thamner Pol, trener First Aid" } end
-      if not haveSpell("Find Minerals") then return { 1426, 50.01, 50.31, "Yarr Hammerstone, trener Mining" } end
-      if not haveSpell("Find Herbs") then return { 1455, 55.9, 59.13, "Reyna Stonebranch, trenerka Herbalism" } end
+      if not haveSpell("First Aid") then return { trainer = 129, label = "trener First Aid" } end
+      if not haveSpell("Find Minerals") then return { trainer = 186, label = "trener Mining" } end
+      if not haveSpell("Find Herbs") then return { trainer = 182, label = "trener Herbalism" } end
       return nil
     end,
     done = function() return haveSpell("First Aid") and haveSpell("Find Minerals") and haveSpell("Find Herbs") end },
@@ -113,15 +115,15 @@ local TODO_HELP = {
   -- 14.11 R22: Gizmonitor daje Arcane Orb/Staff (Ley Orb/Staff to Mirror Lake; lancuchy sie wykluczaja)
   ["Quest „Mage-tastic Gizmonitor” (Arcane Orb albo Arcane Staff)"] = {
     how = "Na 10 poziomie Magis Sparkmantle (trener maga w Kharanos) wysyła do Binka w Ironforge (Mystic Ward), potem skrzynka na północ od Gnomeregan. Nagroda: Arcane Orb albo Arcane Staff. Przewodnik klasowy Polestara otworzy się sam.",
-    loc = { 1455, 27.25, 8.3, "Bink, Ironforge" },
+    loc = { npc = 5144, label = "Bink, Ironforge" },
     done = function() return itemAnywhere("Arcane Orb") or itemAnywhere("Arcane Staff") or itemAnywhere("Ley Orb") or itemAnywhere("Ley Staff") end },
   ["Quest „Old Ironforge Incursion” (Deepblaze)"] = {
     how = "Mapę (Dark Iron Map) upuszcza Dark Iron Spy w Ironbeard's Compound. Oddaj ją Earthseerowi Farsenowi, weź Old Ironforge Incursion, a w Ironforge Important Heirlooms i The Restless Dead. Potem Hall of Thanes z grupą i oddanie u Magniego. Karta Grimuara „Hall of Thanes” w Polestarze prowadzi krok po kroku.",
-    loc = { 1426, 64.9, 58.5, "Earthseer Farsen" },
+    loc = { npc = 264936, label = "Earthseer Farsen" },
     done = function() return itemAnywhere("Deepblaze") or C_QuestLog.IsQuestFlaggedCompleted(96393) end },
   ["Quest „Vyrin's Revenge” (torba 10)"] = {
     how = "Loch Modan, od 15: Vyrin Swiftwind na wschodzie (po A Hunter's Challenge u Daryla). Darmowa torba na 10 miejsc. Karta Grimuara w Polestarze otworzy się sama.",
-    loc = { 1432, 81.7, 64.1, "Vyrin Swiftwind" },
+    loc = { npc = 1156, label = "Vyrin Swiftwind" },
     done = function() return C_QuestLog.IsQuestFlaggedCompleted(531) end },
   ["Różdżka w slocie"] = {
     how = "Najlepsza na start: Deepblaze (quest od 9 poziomu). Zdobądź Dark Iron Map z Dark Iron Spy w Ironbeard's Compound (Dun Morogh), oddaj ją Earthseerowi Farsenowi i zabij ostatniego bossa Hall of Thanes. Szybciej: Lesser Magic Wand z domu aukcyjnego. Załóż prawym klikiem, strzelasz klawiszem G.",
@@ -310,8 +312,17 @@ local function buildSteps()
               loc = hp.loc
             end
           end
+          -- 15.11 (R30 P30): miejsce z Polestara albo Questie; przy odswiezaniu bez wczytywania Codexu, na klik z nim
+          local spec = loc
+          loc = spec and G.resolveLoc and G.resolveLoc(spec, false) or nil
           local btns = {}
-          if loc then table.insert(btns, { "Prowadź", function() wayTo(loc[1], loc[2], loc[3], loc[4]) end }) end
+          if spec then
+            table.insert(btns, { "Prowadź", function()
+              local spot = G.resolveLoc and G.resolveLoc(spec, true)
+              if spot then wayTo(spot[1], spot[2], spot[3], spot[4])
+              else say("nie znam miejsca: " .. tostring(spec.label or t) .. ". Ani Polestar, ani Questie go nie podały.") end
+            end })
+          end
           table.insert(btns, { "Zrobione", mark })
           if old then table.insert(btns, { "Nie dotyczy", mark }) end
           local how = (hp and hp.how) or (old and "Zrób przy okazji albo kliknij Nie dotyczy, jeśli to już nieaktualne." or "Kliknij Zrobione, gdy skończysz.")

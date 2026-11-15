@@ -51,7 +51,8 @@ local function build()
   if P then return end
   P = CreateFrame("Frame", "GrimuarPas", UIParent)
   P:SetSize(5 * 44 + 4 * 6, 66)
-  P:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 166)
+  -- 15.11 (gracz: „te paski tez powinny byc troche wyzej”): 166 -> 206, nad gornym rzedem paskow akcji
+  P:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 206)
   P:SetFrameStrata("MEDIUM")
   P.info = U.Text(P, 12, "body", C.text, "OUTLINE")
   P.info:SetPoint("TOP", P, "TOP", 0, 0)
@@ -86,7 +87,38 @@ local function build()
     P.btn[kind] = b
   end
   P:EnableMouse(false)
+  -- 15.11 (R30 P21, Q6): przy braku picia albo jedzenia (i bez czaru, ktory je robi) skrot do najblizszego sprzedawcy
+  -- jedzenia z czasem dojscia. Zwykly przycisk obok pasa, bezpieczne przyciski przedmiotow zostaja bez zmian.
+  -- Klik: Polestar prowadzi (Nav.nearby.Go("food")), bez niego najblizszy kupiec z Questie (G.guideVendor).
+  P.near = U.Button(P, "Jedzenie i picie", nil, 26)
+  P.near:SetPoint("BOTTOMLEFT", P, "BOTTOMRIGHT", 10, 9)
+  P.near:SetScript("OnClick", function()
+    if not (U.psNearbyGo and U.psNearbyGo("food")) then
+      if G.guideVendor then pcall(G.guideVendor, false) else U.say("nie znam drogi do kupca.") end
+    end
+  end)
+  P.near:Hide()
 end
+
+local function knows(name)
+  local info = U.call(C_Spell and C_Spell.GetSpellInfo, name)
+  local id = type(info) == "table" and info.spellID
+  return id and (U.call(IsPlayerSpell, id) or U.call(IsSpellKnown, id)) and true or false
+end
+-- skrot „Jedzenie i picie: X · ~2 min” (P21)
+local function nearFood()
+  if not (P and P.near) then return end
+  local needD = not P.btn.drink.itemID and not knows("Conjure Water")
+  local needF = not P.btn.food.itemID and not knows("Conjure Food")
+  local want = on() and (needD or needF)
+  P.near:SetShown(want and true or false)
+  if not want then return end
+  P.near:SetLabel((U.psNearbyLabel and U.psNearbyLabel("food")) or "Kup jedzenie i picie")
+  if U.psNearbyQueue and not InCombatLockdown() and not U.psNearby("food") then
+    U.psNearbyQueue({ "food" }, K.nearCb)
+  end
+end
+K.nearCb = function() pcall(nearFood) end
 
 -- przedmioty na przyciskach: tylko poza walka
 local function setItems()
@@ -150,6 +182,7 @@ local function update()
     txt = U.hex(C.gold) .. "brak picia i jedzenia|r"
   end
   P.info:SetText(txt)
+  pcall(nearFood)
 end
 
 local function fade()

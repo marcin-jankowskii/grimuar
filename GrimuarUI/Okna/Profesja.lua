@@ -111,8 +111,9 @@ local function reagentCard(guide, r, times)
       if gl.t == "buy" and gl.item == id and not card.go then
         local c = U.psCandidate and U.psCandidate(gl)
         if c then
-          subs[#subs + 1] = "sprzedawca: " .. (c.npcName or "?") .. " · klik: prowadź"
-          card.go = { c.map, c.x, c.y, c.npcName }
+          local m, x, y = U.psLive(c)
+          subs[#subs + 1] = "sprzedawca: " .. (c.npcName or "?") .. ((m and x and G.etaText) and G.etaText(m, x, y) or "") .. " · klik: prowadź"
+          card.go = { m, x, y, c.npcName }
         end
       end
     end

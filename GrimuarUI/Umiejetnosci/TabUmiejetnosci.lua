@@ -382,6 +382,11 @@ local function refresh()
       or (U.hex(C.danger) .. " · na teraz i następny poziom trzeba " .. coins(need) .. "|r")) or "")
   end
   S.train:SetText(table.concat(parts, "\n"))
+  if S.psRow then
+    local okR, h = pcall(S.psRow.Draw, S.psRow, L_W - 36)
+    h = okR and h or 0
+    S.view:SetPoint("BOTTOMRIGHT", S.L, "BOTTOMRIGHT", -14, h > 0 and (162 + h) or 146)
+  end
 
   S.trees, S.talByName = readTalents()
   S.seq = planSeq()
@@ -464,6 +469,14 @@ local function build(page)
   local view = CreateFrame("ScrollFrame", nil, L)
   view:SetPoint("TOPLEFT", h, "BOTTOMLEFT", 0, -14)
   view:SetPoint("BOTTOMRIGHT", L, "BOTTOMRIGHT", -14, 146)
+  -- 15.11 (R30 P09): karty Polestara nad „Trener”: czary na nastepny poziom z kosztem i gdzie trenowac
+  -- (UmiejetnosciPolestar.lua); gdy sa, lista czarow konczy sie wyzej
+  S.L = L
+  if U.psTrainRow then
+    S.psRow = U.psTrainRow(L)
+    S.psRow:SetPoint("BOTTOMLEFT", L, "BOTTOMLEFT", 18, 152)
+    S.psRow:Hide()
+  end
   local list = CreateFrame("Frame", nil, view)
   list:SetSize(CELL_W * 2 + 12, 10)
   view:SetScrollChild(list)

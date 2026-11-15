@@ -27,6 +27,17 @@ local function showBlizz(alpha)
   if g then pcall(g.SetAlpha, g, alpha) end
 end
 local function call(fn, ...) return U.call(fn, ...) end
+-- 15.11 (gracz: „samo mi przyjelo questa i jak klikam Przyjmij, to nie znika okno”): Polestar sam przyjmuje questy
+-- z trasy (Core\Automation.lua, AcceptQuest w srodku QUEST_DETAIL), wiec QUEST_FINISHED przychodzi PRZED naszym
+-- QUEST_DETAIL i Grimuar otwieral juz puste okno. Rozmowa „zyje” tylko, gdy okno gry jest otwarte i ma dane.
+local function live(mode)
+  local q, g = blizz()
+  if mode == "gossip" then return (g and g:IsShown()) and true or false end
+  if not (q and q:IsShown()) then return false end
+  if mode == "greeting" then return true end
+  local title = call(GetTitleText)
+  return type(title) == "string" and title ~= ""
+end
 
 -- ---------- budowa ----------
 local F
@@ -148,7 +159,11 @@ local function build()
   for i, k in ipairs({ "main", "second", "third" }) do
     local b = U.Button(F.left, "", nil, 30, i == 1)
     if prev then b:SetPoint("LEFT", prev, "RIGHT", 8, 0) else b:SetPoint("BOTTOMLEFT", F.left, "BOTTOMLEFT", 0, 0) end
-    b:SetScript("OnClick", function(self) if self.act then pcall(self.act) end end)
+    b:SetScript("OnClick", function(self)
+      if self.act then pcall(self.act) end
+      -- 15.11: gdy rozmowa juz sie skonczyla (np. Polestar przyjal quest sam), przycisk zamyka puste okno
+      C_Timer.After(0.3, function() if F:IsShown() and not live(R.mode) then F:Hide() R.mode, R.sel = nil, nil showBlizz(1) end end)
+    end)
     F.acts[k] = b
     prev = b
   end
@@ -467,13 +482,16 @@ end
 
 local ev = CreateFrame("Frame")
 for _, e in ipairs({ "GOSSIP_SHOW", "GOSSIP_CLOSED", "QUEST_GREETING", "QUEST_DETAIL", "QUEST_PROGRESS", "QUEST_COMPLETE",
-  "QUEST_FINISHED", "QUEST_ITEM_UPDATE", "GET_ITEM_INFO_RECEIVED" }) do pcall(ev.RegisterEvent, ev, e) end
+  "QUEST_FINISHED", "QUEST_ACCEPTED", "QUEST_ITEM_UPDATE", "GET_ITEM_INFO_RECEIVED" }) do pcall(ev.RegisterEvent, ev, e) end
 local MODE = { GOSSIP_SHOW = "gossip", QUEST_GREETING = "greeting", QUEST_DETAIL = "detail", QUEST_PROGRESS = "progress", QUEST_COMPLETE = "complete" }
 ev:SetScript("OnEvent", function(_, e)
   if MODE[e] then
-    -- nastepna strona tej samej rozmowy: po klatce, gdy gra juz podmienila dane
-    C_Timer.After(0, function() open(MODE[e]) end)
-  elseif e == "GOSSIP_CLOSED" or e == "QUEST_FINISHED" then
+    -- nastepna strona tej samej rozmowy: po klatce, gdy gra juz podmienila dane; nic, gdy rozmowa juz sie skonczyla
+    C_Timer.After(0, function()
+      if live(MODE[e]) then open(MODE[e])
+      elseif F and F:IsShown() and not live(R.mode) then F:Hide() R.mode, R.sel = nil, nil showBlizz(1) end
+    end)
+  elseif e == "GOSSIP_CLOSED" or e == "QUEST_FINISHED" or e == "QUEST_ACCEPTED" then
     C_Timer.After(0, function()
       local q, g = blizz()
       local still = (q and q:IsShown()) or (g and g:IsShown())

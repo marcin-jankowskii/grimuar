@@ -152,8 +152,8 @@ local function instant(id)
 end
 local function drawLoot(d)
   local p = S.lootP
-  p:Begin(S.lootKey == d.key)
-  S.lootKey = d.key
+  p:Begin(S.lootKey == "l:" .. d.key)
+  S.lootKey = "l:" .. d.key
   if S.hasBanner then p:Para(infoLine(d), C.text) else p:Title(d.name, infoLine(d)) end
   local loot = U.dungeonLoot and U.dungeonLoot(d.key)
   if not loot or #loot == 0 then
@@ -161,6 +161,13 @@ local function drawLoot(d)
     p:End()
     return
   end
+  -- 15.11 (R30 P28): klik w ikone wybiera przedmiot, nad lupami „Skąd zdobyć” i „Prowadź po to” (EkwipunekPolestar.lua)
+  if S.pickKey ~= d.key then S.pick, S.pickName, S.pickKey = nil, nil, d.key end
+  if S.pick and U.psSourceBlocks then
+    local okS, err = pcall(U.psSourceBlocks, p, S.pick, S.pickName)
+    if not okS and U.logError then U.logError("wyprawy/skad", err) end
+  end
+  local iconOpts = { onPick = function(id, nm) S.pick, S.pickName = id, nm U.wyprawyRefresh() end, selected = S.pick }
   for _, b in ipairs(loot) do
     if #b.items > 0 then
       local gear, rec = {}, {}
@@ -171,15 +178,38 @@ local function drawLoot(d)
       end
       table.sort(gear, function(a, c) return (a.quality or 2) > (c.quality or 2) end)
       p:Head(b.name or "?", #gear .. " przedm." .. (#rec > 0 and (" · " .. #rec .. " receptur") or ""))
-      p:Icons(gear)
+      p:Icons(gear, iconOpts)
       if #rec > 0 then
         p:Para("Receptury i plany", C.faint, 11)
-        p:Icons(rec, { size = 30 })
+        p:Icons(rec, { size = 30, onPick = iconOpts.onPick, selected = S.pick })
       end
     end
   end
   p:Gap(6)
-  p:Para("Najedź na ikonę: dymek przedmiotu z oceną Pawna (zielona strzałka = ulepszenie dla Ciebie). Shift+klik: link na czat, Ctrl+klik: przymierz.", C.muted, 12)
+  p:Para("Najedź na ikonę: dymek przedmiotu z oceną Pawna (zielona strzałka = ulepszenie dla Ciebie). Klik: skąd zdobyć (Polestar). Shift+klik: link na czat, Ctrl+klik: przymierz.", C.muted, 12)
+  p:End()
+end
+
+-- 15.11 (R30 P46): strona Questy jako bloki: zbierz questy, oddaj po lochu, zestrojenia (WyprawyPolestar.lua), pod nimi
+-- pelna lista questow lochu jak dotad
+local function drawQuests(d)
+  local p = S.lootP
+  p:Begin(S.lootKey == "q:" .. d.key)
+  S.lootKey = "q:" .. d.key
+  if S.hasBanner then p:Para(infoLine(d), C.text) else p:Title(d.name, infoLine(d)) end
+  if U.dungeonPlanBlocks then
+    local ok, err = pcall(U.dungeonPlanBlocks, p, d)
+    if not ok and U.logError then U.logError("wyprawy/plan", err) end
+  end
+  local qs = U.dungeonQuests and U.dungeonQuests(d.key) or {}
+  p:Head("Wszystkie questy lochu", #qs > 0 and tostring(#qs) or "")
+  if #qs == 0 then
+    p:Para(d.src ~= "Polestar" and "Zadania lochu: włącz Polestar (moduł lochów)." or "Brak zadań Przymierza do tego lochu.", C.muted)
+  else
+    local xl = U.dungeonQuestXPLine and U.call(U.dungeonQuestXPLine, d.key)
+    if xl then p:Para(xl, C.text, 12) end
+    p:Para(table.concat(questLines(qs), "\n"), C.text, 12)
+  end
   p:End()
 end
 
@@ -204,10 +234,18 @@ local function cardText(d, members)
       end
       L[#L + 1] = "\n" .. GOLD .. "TWÓJ POSTĘP|r"
       L[#L + 1] = "Zadania: " .. done .. " zrobione, " .. has .. " w dzienniku, " .. (#qs - done - has) .. " do wzięcia · bossowie: " .. #bosses
+      -- 15.11 (R30 P47): ile poziomu daja questy lochu (Polestar Dungeons.QuestXP, WyprawyPolestar.lua)
+      local xl = U.dungeonQuestXPLine and U.call(U.dungeonQuestXPLine, d.key)
+      if xl then L[#L + 1] = xl end
     end
     local last
     for _, r in ipairs(U.expeditionRuns and U.expeditionRuns() or {}) do if r.name == d.name then last = r end end
     if last then L[#L + 1] = "Ostatnio: " .. U.fmtDate(last.start) .. " · bossowie " .. #(last.bosses or {}) .. ((#(last.members or {}) > 0) and (" · z: " .. table.concat(last.members, ", ")) or "") end
+    -- 15.11 (R30 P27): limit wejsc do lochow (Polestar Maps.GetInstanceStatus); rajd ma blokade, nie limit
+    if not d.raid then
+      local il = U.instanceStatusLine and U.call(U.instanceStatusLine)
+      if il then L[#L + 1] = (#qs > 0 and "" or "\n") .. il end
+    end
   elseif S.cpage == "bossowie" then
     if #bosses == 0 then L[#L + 1] = "\n" .. MUTED .. "Polestar nie zna bossów tego miejsca (nowy loch Forever albo Polestar wyłączony).|r" end
     for _, b in ipairs(bosses) do
@@ -219,6 +257,8 @@ local function cardText(d, members)
     end
   elseif S.cpage == "questy" then
     if #qs == 0 then L[#L + 1] = "\n" .. MUTED .. (d.src ~= "Polestar" and "Zadania lochu: włącz Polestar (moduł lochów)." or "Brak zadań Przymierza do tego lochu.") .. "|r" end
+    local xl = #qs > 0 and U.dungeonQuestXPLine and U.call(U.dungeonQuestXPLine, d.key)
+    if xl then L[#L + 1] = "\n" .. xl end
     L[#L + 1] = ""
     for _, x in ipairs(questLines(qs)) do L[#L + 1] = x end
   elseif S.cpage == "lupy" then
@@ -262,7 +302,9 @@ local function rightText(d)
     for _, ln in ipairs(U.raidComposition and U.raidComposition() or {}) do L[#L + 1] = (ln[2] and OK .. "◆ |r" or U.hex(C.danger) .. "◇ |r") .. ln[1] end
     local n, nextFree = U.instanceEntries()
     L[#L + 1] = "\n" .. GOLD .. "WEJŚCIA I BLOKADY|r"
-    L[#L + 1] = "Nowe wejścia w tej godzinie: " .. n .. " / 5" .. (nextFree and (" · następne wolne o " .. date("%H:%M", nextFree)) or "")
+    -- 15.11 (R30 P27): licznik Polestara (konto, Maps.GetInstanceStatus), bez niego licznik Grimuara
+    local il = U.instanceStatusLine and U.call(U.instanceStatusLine)
+    L[#L + 1] = il or ("Nowe wejścia w tej godzinie: " .. n .. " / 5" .. (nextFree and (" · następne wolne o " .. date("%H:%M", nextFree)) or ""))
     L[#L + 1] = MUTED .. "Limit liczy konto: 5 różnych lochów na godzinę. Reset lochu: PPM na swoim portrecie (lider).|r"
     local saved = U.savedInstances()
     if #saved == 0 then L[#L + 1] = MUTED .. "Brak blokad rajdowych.|r" end
@@ -343,11 +385,14 @@ function U.wyprawyRefresh()
   local d = S.sel and U.dungeonGet(S.sel)
   pcall(paintBanner, d)
   S.psBtn:SetShown(d ~= nil and d.src == "Polestar")
-  local lootPage = d ~= nil and S.cpage == "lupy"
+  -- 15.11 (R30 P18/P27): czas dojscia do wejscia na przycisku (planer Polestara, G.etaText)
+  if S.goBtn then S.goBtn:SetLabel("Prowadź do wejścia" .. ((d and U.dungeonEntranceEta and U.call(U.dungeonEntranceEta, d)) or "")) end
+  -- 15.11 (R30 P46): Lupy i Questy jako bloki (karty), Przeglad i Bossowie jako tekst
+  local lootPage = d ~= nil and (S.cpage == "lupy" or S.cpage == "questy")
   S.card:SetShown(not lootPage)
   S.lootP:SetShown(lootPage)
   if lootPage then
-    local ok, err = pcall(drawLoot, d)
+    local ok, err = pcall(S.cpage == "questy" and drawQuests or drawLoot, d)
     if not ok then S.lootP:Hide() S.card:Show() S.card:Set(cardText(d, members) .. "\n" .. MUTED .. tostring(err) .. "|r") end
   elseif d then S.card:Set(cardText(d, members)) else S.card:Set(MUTED .. "Brak listy lochów.|r") end
   -- pasek „Kto idzie”: wynik G1 dla wybranego lochu
@@ -517,6 +562,7 @@ local function build(page)
   local go = U.Button(mid, "Prowadź do wejścia", nil, 30, true)
   go:SetPoint("BOTTOMLEFT", 20, 14)
   go:SetScript("OnClick", function() if S.sel then U.dungeonGuide(S.sel) end end)
+  S.goBtn = go
   local onmap = U.Button(mid, "Na mapie", nil, 30)
   onmap:SetPoint("LEFT", go, "RIGHT", 8, 0)
   onmap:SetScript("OnClick", function()

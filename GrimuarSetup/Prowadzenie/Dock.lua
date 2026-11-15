@@ -284,6 +284,19 @@ local function updateHUD()
   local ok, line = pcall(tempoLine)
   hud.text:SetText(C_FROST .. "Grimuar|r   " .. (ok and line or ""))
   local w = hud.text:GetStringWidth()
+  -- 15.11 (R30 P15): tempo wedlug trasy Polestara pod tempem (GrimuarUI Hud\TempoTrasy.lua liczy na zdarzenia)
+  local okP, pace = false, nil
+  if G.paceLine then okP, pace = pcall(G.paceLine) end
+  pace = okP and type(pace) == "string" and pace ~= "" and pace or nil
+  local base = 20
+  if pace and hud.pace then
+    hud.pace:SetText(pace)
+    hud.pace:Show()
+    w = math.max(w, math.min(560, hud.pace:GetStringWidth()))
+    base = 36
+  elseif hud.pace then
+    hud.pace:Hide()
+  end
   local okS, steps = pcall(buildSteps)
   if not okS or type(steps) ~= "table" then steps = {} end
   pcall(autoGuide, steps)
@@ -292,11 +305,11 @@ local function updateHUD()
   local s1 = steps[1]
   if GrimuarSetupDB.hideStep or docked or not s1 or DOCK_SKIP[s1.key] then
     hud.step:Hide()
-    hud:SetHeight(20)
+    hud:SetHeight(base)
   else
     hud.step:SetText(C_GOLD .. "» " .. s1.text .. "|r")
     hud.step:Show()
-    hud:SetHeight(38)
+    hud:SetHeight(base + 18)
     w = math.max(w, math.min(560, hud.step:GetStringWidth()))
   end
   hud:SetWidth(math.max(160, w + 24))
@@ -327,6 +340,13 @@ local function createHUD()
   hud.text = hud:CreateFontString(nil, "OVERLAY")
   hud.text:SetFont(FONT, 12, "")
   hud.text:SetPoint("TOP", hud, "TOP", 0, -4)
+  -- 15.11 (R30 P15): linia „Do 24: −3 paski · trudny: X (27)” (G.paceLine z GrimuarUI)
+  hud.pace = hud:CreateFontString(nil, "OVERLAY")
+  hud.pace:SetFont(FONT, 12, "")
+  hud.pace:SetPoint("TOP", hud, "TOP", 0, -20)
+  hud.pace:SetWidth(560)
+  hud.pace:SetWordWrap(false)
+  hud.pace:Hide()
   hud.step = hud:CreateFontString(nil, "OVERLAY")
   hud.step:SetFont(FONT, 13, "")
   hud.step:SetPoint("BOTTOM", hud, "BOTTOM", 0, 4)
@@ -342,6 +362,14 @@ local function createHUD()
     GameTooltip:AddLine("Rested: " .. restedPercent() .. "% poziomu", 1, 1, 1)
     GameTooltip:AddLine("Złoto w tej sesji: " .. fmtMoney(GetMoney() - (S.money0 or GetMoney())), 1, 1, 1)
     GameTooltip:AddLine(hearthInfo(), 1, 1, 1)
+    -- 15.11 (R30 P15): szczegoly tempa wedlug trasy Polestara
+    local okT, tip = false, nil
+    if G.paceTip then okT, tip = pcall(G.paceTip) end
+    if okT and type(tip) == "table" and #tip > 0 then
+      GameTooltip:AddLine(" ")
+      GameTooltip:AddLine(G.tr and G.tr("Tempo według trasy Polestara") or "Tempo według trasy Polestara", 0.85, 0.71, 0.36)
+      for _, ln in ipairs(tip) do GameTooltip:AddLine(ln, 1, 1, 1, true) end
+    end
     GameTooltip:AddLine("Klik: okno Grimuara. Przeciągnij: przesuń. /grimuar sesja 60 włącza minutnik.", 0.7, 0.7, 0.7, true)
     GameTooltip:Show()
   end)

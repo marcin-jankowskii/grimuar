@@ -36,6 +36,9 @@ local function build(page)
   card.b1:SetPoint("TOPLEFT", card.why, "BOTTOMLEFT", 0, -12)
   card.b2:SetPoint("LEFT", card.b1, "RIGHT", 8, 0)
   S.card = card
+  S.tH = h
+  -- 15.11 (R30 P03): karta „Teraz wg Polestara” pod krokiem planu (GrimuarPolestar.lua); pozycje ustawia refreshData
+  S.psNow = U.psNowWidget and U.psNowWidget(L, 360)
 
   S.rozH = U.H2(L, "Rozwój")
   S.rozH:SetPoint("TOPLEFT", card, "BOTTOMLEFT", 0, -20)
@@ -106,6 +109,15 @@ local function build(page)
   fullBtn:SetScript("OnClick", function()
     if SlashCmdList.GRIMUAR then U.OpenGame(function() SlashCmdList.GRIMUAR("") end) end
   end)
+  -- 15.11 (R30 P34, P11): miedzy sesja a przyciskami karty z Polestara: ulepszenia przed Toba (EkwipunekPolestar.lua)
+  -- i questy klasowe maga (GrimuarPolestar.lua); panel przewijany kolkiem
+  S.extra = U.Blocks(R)
+  S.extra:SetPoint("TOPLEFT", box, "BOTTOMLEFT", 0, -14)
+  S.extra:SetPoint("BOTTOMRIGHT", fullBtn, "TOPRIGHT", 0, 10)
+  S.extra.bg:SetAlpha(0.5)
+  S.extra.view:ClearAllPoints()
+  S.extra.view:SetPoint("TOPLEFT", 12, -10)
+  S.extra.view:SetPoint("BOTTOMRIGHT", -8, 8)
 
   -- ---------- srodek: Trasa ----------
   local M = CreateFrame("Frame", nil, page)
@@ -170,6 +182,20 @@ local function refreshData()
   end
   local ch = 12 + 12 + 6 + card.title:GetStringHeight() + 6 + card.why:GetStringHeight() + (card.b1:IsShown() and (12 + 28) or 0) + 14
   card:SetHeight(math.floor(ch + 0.5))
+  -- 15.11 (R30 P03): karta „Teraz wg Polestara” (GrimuarPolestar.lua); ogolny krok planu „idź za strzałką Polestar”
+  -- zastepuje sama, wiec wtedy karta planu znika, a Polestar pokazuje do 4 celow
+  local psH = 0
+  if S.psNow then
+    local generic = (not st) or st.key == "polestar"
+    local okD, hh = pcall(S.psNow.Draw, S.psNow, generic and 4 or 3)
+    psH = okD and hh or 0
+    card:SetShown(not (generic and psH > 0))
+    S.psNow:ClearAllPoints()
+    if card:IsShown() then S.psNow:SetPoint("TOPLEFT", card, "BOTTOMLEFT", 0, -14)
+    else S.psNow:SetPoint("TOPLEFT", S.tH, "BOTTOMLEFT", 0, -10) end
+  end
+  S.rozH:ClearAllPoints()
+  S.rozH:SetPoint("TOPLEFT", psH > 0 and S.psNow or card, "BOTTOMLEFT", 0, -20)
 
   -- Rozwoj
   local items = {}
@@ -284,12 +310,66 @@ local function refreshData()
   S.sess[4]:Set("Zgony", tostring(type(SS.deaths) == "table" and #SS.deaths or 0))
   local money = (SS.money0 and G.fmtMoney) and U.call(G.fmtMoney, (GetMoney() or 0) - SS.money0) or "—"
   S.sess[5]:Set("Złoto", money or "—")
+
+  -- 15.11 (R30 P34, P11): ulepszenia przed Toba i questy klasowe (karty z Polestara, liczone z pamiecia)
+  local p = S.extra
+  if p then
+    p:Begin(true)
+    local any = false
+    local up = U.psUpgradeCards and U.call(U.psUpgradeCards, 2) or {}
+    if #up > 0 then
+      any = true
+      p:Head("Przed Tobą", "ulepszenia na trasie")
+      p:Cards(up, { cols = 1 })
+    end
+    local cq, cqDone = {}, 0
+    if U.psClassCards then
+      local okC, a, b = pcall(U.psClassCards, 4)
+      if okC then cq, cqDone = a or {}, b or 0 end
+    end
+    if #cq > 0 then
+      any = true
+      p:Head("Questy klasowe", cqDone > 0 and ("zrobione: " .. cqDone) or "Polestar")
+      p:Cards(cq, { cols = 1 })
+    end
+    if not any then p:Para(_G.Polestar and "Polestar: na razie bez ulepszeń na trasie i bez questów klasowych do wzięcia." or "Ulepszenia na trasie i questy klasowe pokazuje Polestar (włącz go na liście addonów).", C.faint, 12) end
+    p:End()
+  end
 end
 
+-- 15.11 (R30 P03): zamiast tykania co 3 s odswiezanie na komunikaty Polestara (U.onPolestar, Hub\PolestarSzyna.lua)
+-- i zdarzenia gry, zebrane w jedno odswiezenie na 0,3 s, tylko przy widocznej zakladce. Zostaje wolny zegar 15 s
+-- (czas sesji, odpoczynek po walce, many przybywa bez zdarzen).
+local function soon()
+  if S.q or not (S.page and S.page:IsVisible()) then return end
+  S.q = true
+  C_Timer.After(0.3, function()
+    S.q = nil
+    if S.page and S.page:IsVisible() then pcall(refreshData) end
+  end)
+end
+-- szyna Polestara laduje sie pozniej w TOC: zapis przy pierwszym otwarciu zakladki
+local function hookPolestar()
+  if S.psHooked or not U.onPolestar then return end
+  S.psHooked = true
+  U.onPolestar({ "STEP_CHANGED", "STEP_UPDATED", "WAYPOINT_CHANGED", "GUIDE_CHANGED", "TABS_CHANGED", "GUIDE_COMPLETED",
+    "GEAR_UPDATED", "CLASS_QUEST_READY", "TRAIN_DUE", "CLASS_TRAINED", "ITEMDB_LOADED" }, soon)
+end
+local ev = CreateFrame("Frame")
+for _, e in ipairs({ "PLAYER_LEVEL_UP", "PLAYER_XP_UPDATE", "PLAYER_MONEY", "PLAYER_REGEN_ENABLED", "PLAYER_REGEN_DISABLED",
+  "BAG_UPDATE_DELAYED", "PLAYER_EQUIPMENT_CHANGED", "LEARNED_SPELL_IN_TAB", "QUEST_TURNED_IN", "QUEST_ACCEPTED", "QUEST_LOG_UPDATE",
+  "ZONE_CHANGED_NEW_AREA", "PLAYER_DEAD", "PLAYER_ALIVE", "PLAYER_UNGHOST", "CHARACTER_POINTS_CHANGED", "SKILL_LINES_CHANGED" }) do
+  pcall(ev.RegisterEvent, ev, e)
+end
+pcall(ev.RegisterUnitEvent, ev, "UNIT_AURA", "player")
+ev:SetScript("OnEvent", soon)
+
 local function refresh(page)
+  S.page = page
+  hookPolestar()
   refreshData()
   if S.ticker then S.ticker:Cancel() end
-  S.ticker = C_Timer.NewTicker(3, function() if page:IsVisible() then pcall(refreshData) end end)
+  S.ticker = C_Timer.NewTicker(15, function() if page:IsVisible() then pcall(refreshData) end end)
 end
 local function leave()
   if S.ticker then S.ticker:Cancel() S.ticker = nil end

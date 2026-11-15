@@ -144,14 +144,20 @@ local OPTS = {
   -- 13.11: FilterChatMessages i BlockDuelSpam wypadly: Leatrix w Forever sam je wylacza przy kazdym starcie
   -- (LockDF: „breaks chat at the moment due to game bug”), wiec Napraw krecil sie w kolko (gracz: „3 razy i nie znika”)
   { "Leatrix_Plus", lea, "RestoreChatMessages", "On", "czat zostaje po /reload", leatrixNoSave },
-  { "Polestar", function() return polestar("nav") end, "answerTomTom", true, "strzałka Polestar dla przycisków Prowadź" },
-  { "Polestar", function() return polestar("qol") end, "deathHelper", false, "duch: strzałka do ciała z Grimuara, nie do Spirit Healera" },
-  { "Polestar", function() return polestar("qol") end, "trainAllButton", false, "bez przycisku Train All (kupuj przez Kup dla Frosta)" },
-  { "Polestar", function() return polestar("qol") end, "questTooltips", false, "dymki questów tylko z Questie (bez dubli)" },
-  { "Polestar", function() return polestar("qol") end, "sellJunk", false, "śmieci sprzedaje Leatrix (bez dubla)" },
-  { "Polestar", function() return polestar("qol") end, "autoRepair", false, "naprawia Leatrix (bez dubla)" },
-  { "Polestar", function() return polestar("qol") end, "fastLoot", false, "szybkie łupy bez dubla" },
-  { "Polestar", function() return polestar("qol") end, "skipGossip", false, "rozmowy z NPC bez dubla" },
+  -- 15.11 (R30 P02): ps = sekcja ustawien Polestara; odczyt Polestar.Get, zapis Polestar.Set (dziala bez /reload)
+  { "Polestar", function() return polestar("qol") end, "deathHelper", false, "duch: strzałka do ciała z Grimuara, nie do Spirit Healera", ps = "qol" },
+  { "Polestar", function() return polestar("qol") end, "trainAllButton", false, "bez przycisku Train All (kupuj przez Kup dla Frosta)", ps = "qol" },
+  { "Polestar", function() return polestar("qol") end, "questTooltips", false, "dymki questów tylko z Questie (bez dubli)", ps = "qol" },
+  { "Polestar", function() return polestar("qol") end, "sellJunk", false, "śmieci sprzedaje Leatrix (bez dubla)", ps = "qol" },
+  { "Polestar", function() return polestar("qol") end, "autoRepair", false, "naprawia Leatrix (bez dubla)", ps = "qol" },
+  { "Polestar", function() return polestar("qol") end, "fastLoot", false, "szybkie łupy bez dubla", ps = "qol" },
+  { "Polestar", function() return polestar("qol") end, "skipGossip", false, "rozmowy z NPC bez dubla", ps = "qol" },
+  -- 15.11 (R30 etap 3, decyzja Q7 „Grimuar pokazuje, w Polestarze wylaczam”): karta „loch otwarty, zbierz questy”
+  -- (UI\DungeonToast.lua) dubluje Wyprawy Grimuara (P46). Opcja wylacza tylko te karte: dane lochow, PickupPlan i PickUp
+  -- dzialaja dalej (Dungeons.IsEnabled to dungeons.enabled). Czarow na poziom (qol.levelUpSpells -> LEVELUP_SPELLS),
+  -- „Przy okazji” (behavior.whileHere -> dane GetWhileHereList) i questow klasowych (behavior.offerClassQuests ->
+  -- CLASS_QUEST_READY) nie wylaczamy: od tych opcji zaleza komunikaty i dane, z ktorych korzysta Grimuar.
+  { "Polestar", function() return polestar("dungeons") end, "headsUp", false, "lochy: zbieranie questów pokazują Wyprawy Grimuara (bez karty Polestara)", ps = "dungeons" },
   { "Spy", spyProfile, "DisableWhenPVPUnflagged", true, "cisza, gdy nie masz flagi PvP" },
   { "Spy", spyProfile, "ResizeSpyLimit", 8, "okno na najwyżej 8 graczy" },
   { "ThreatClassic2", tc2Warnings, "sound", true, "dźwięk, gdy przejmujesz aggro" },
@@ -193,8 +199,14 @@ local function addonOptions(bad, good)
   for _, o in ipairs(OPTS) do
     if addonState(o[1]) then
       local okT, t = pcall(o[2])
+      -- 15.11 (R30 P02): opcje Polestara czytane przez Polestar.Get (wartosc domyslna nie lezy w zapisie)
+      local cur = okT and type(t) == "table" and t[o[3]] or nil
+      if o.ps and Polestar and Polestar.Get then
+        local okG, v = pcall(Polestar.Get, o.ps .. "." .. o[3])
+        if okG then cur, okT, t = v, true, t or {} end
+      end
       if okT and type(t) == "table" then
-        if optEqual(t[o[3]], o[4]) then
+        if optEqual(cur, o[4]) then
           good()
         else
           if not by[o[1]] then by[o[1]] = {} order[#order + 1] = o[1] end
@@ -211,13 +223,18 @@ local function addonOptions(bad, good)
       table.concat(names, ", ") .. (#list > 2 and ", …" or "") .. ").",
       "Napraw ustawi je jak w Grimuarze, potem przeładowanie UI.",
       function()
-        local after = {}
+        local after, reload = {}, false
         for _, o in ipairs(list) do
-          pcall(function() local t = o[2]() if type(t) == "table" then t[o[3]] = o[4] end end)
+          if o.ps and Polestar and Polestar.Set and pcall(Polestar.Set, o.ps .. "." .. o[3], o[4]) then
+            -- Polestar przyjal zmiane od razu (SETTING_CHANGED), bez /reload
+          else
+            pcall(function() local t = o[2]() if type(t) == "table" then t[o[3]] = o[4] end end)
+            reload = true
+          end
           if o[6] then after[o[6]] = true end
         end
         for fn in pairs(after) do pcall(fn) end
-        needReload = true
+        if reload then needReload = true end
       end)
   end
 end

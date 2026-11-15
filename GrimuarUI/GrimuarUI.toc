@@ -4,7 +4,7 @@
 ## Notes-enUS: Witcher-style hub (` key): character, builds, spells, journal, map, codex, crafting, social, expeditions, chronicle. /hub
 ## Author: Grimuar
 ## X-License: GPL-3.0
-## Version: 0.17.0
+## Version: 0.18.0
 ## Dependencies: GrimuarSetup
 ## OptionalDeps: Baganator, Questie, Polestar, GatherMate2
 ## SavedVariables: GrimuarUIDB
@@ -71,4 +71,11 @@ Buildy\EdytorSekcje.lua
 Buildy\Kreator.lua
 Nowosci\NowosciDane.lua
 Nowosci\TabNowosci.lua
+Hub\PolestarSzyna.lua
+Hud\TempoTrasy.lua
+Dziennik\DziennikPrzyOkazji.lua
+Umiejetnosci\UmiejetnosciPolestar.lua
+Wyprawy\WyprawyPolestar.lua
+Ekwipunek\EkwipunekPolestar.lua
+Grimuar\GrimuarPolestar.lua
 Hub\Autotest.lua

@@ -84,6 +84,21 @@ local function fillCard(f, c, cw, ch)
   f.onClick = c.onClick
 end
 
+-- 15.11 (R30 P09): pojedyncza karta poza panelem z blokami (okno trenera, Umiejetnosci), ten sam wyglad co p:Cards.
+-- card:Fill(c, szerokosc) -> wysokosc; c jak w p:Cards
+local function cardHeight(c) return 36 + ((c.sub ~= nil and c.sub ~= "") and 17 or 0) + (c.frac ~= nil and 14 or 0) end
+U.cardHeight = cardHeight
+function U.Card(parent)
+  local f = makeCard(parent)
+  function f:Fill(c, cw, ch)
+    ch = ch or cardHeight(c)
+    self:SetSize(cw, ch)
+    fillCard(self, c, cw, ch)
+    return ch
+  end
+  return f
+end
+
 -- ---------- slot przedmiotu ----------
 local function makeSlot(par, size)
   local b = U.Slot(par, size)
@@ -98,7 +113,17 @@ local function makeSlot(par, size)
     GameTooltip:Show()
   end)
   b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+  -- 15.11 (R30 P28): zloty znak wybranego przedmiotu (p:Icons opts.selected)
+  b.selT = b:CreateTexture(nil, "OVERLAY", nil, 4)
+  b.selT:SetPoint("TOPLEFT", -2, 2) b.selT:SetPoint("BOTTOMRIGHT", 2, -2)
+  b.selT:SetColorTexture(C.gold[1], C.gold[2], C.gold[3], 0.25)
+  b.selT:Hide()
   b:SetScript("OnClick", function(self)
+    -- 15.11 (R30 P28): klik bez klawisza wybiera przedmiot (opts.onPick, np. „Skąd zdobyć” w Łupach), z klawiszem jak dotad
+    if self.pick and not (IsShiftKeyDown() or IsControlKeyDown() or IsAltKeyDown()) then
+      pcall(self.pick, self.id, self.nm)
+      return
+    end
     local _, link = U.call(C_Item and C_Item.GetItemInfo, self.id)
     if link and HandleModifiedItemClick then pcall(HandleModifiedItemClick, link) end
   end)
@@ -363,7 +388,8 @@ function U.Blocks(parent)
     self.y = self.y + math.ceil(#list / nc) * (ch + GAP) + 2
   end
 
-  -- siatka ikon przedmiotow: { id, name, quality, icon }; opts.size
+  -- siatka ikon przedmiotow: { id, name, quality, icon }; opts.size; opts.onPick(id, nazwa): klik bez klawisza,
+  -- opts.selected: id przedmiotu ze zlotym znakiem
   function p:Icons(items, opts)
     if #items == 0 then return end
     local size = (opts and opts.size) or 38
@@ -377,6 +403,8 @@ function U.Blocks(parent)
       b:SetQuality(it.quality)
       b.count:SetText(it.count and tostring(it.count) or "")
       b.up:SetShown(it.id ~= nil and pawnUp(it.id))
+      b.pick = opts and opts.onPick or nil
+      b.selT:SetShown(opts ~= nil and opts.selected ~= nil and opts.selected == it.id)
     end
     self.y = self.y + math.ceil(#items / per) * (size + 6) + 4
   end

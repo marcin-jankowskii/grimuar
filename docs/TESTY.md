@@ -50,5 +50,17 @@ Automatycznie: `/gr test` (moduły GrimuarSetup) i `/hub test` (wszystkie zakła
 | Hub > PvP: kafelki, pola bitew, po BG wpis w „Ostatnie mecze” | | | | | |
 | Po wejściu: karta „Ile masz czasu?”, wybór czasu = plan na pasku i w kartach; `/hub start` | | | | | |
 | `/gr jezyk en`: nowe okna po angielsku | | | | | |
+| 5.9/0.18 `/gr test`: „UI: Polestar” (wersja, API strzałki v1, zdarzenia słuchane) i testy funkcji Polestara bez błędów | | | | | |
+| „Prowadź” (Dziennik, trener, sprzedawca): strzałka Polestara, czas „~N min”, po dojściu wraca do przewodnika | | | | | |
+| Kompas: czas obok odległości celu; niebieskie romby „Przy okazji”; nie znika po walce | | | | | |
+| Pasek tempa: „Do N: −X pasków” albo „na tempie” | | | | | |
+| Dziennik: „Przy okazji i za Tobą”, klik w kartę prowadzi | | | | | |
+| Torby: ◆ przy przedmiocie dalszego kroku trasy, w dymku „krok N”; u kupca się nie sprzedaje | | | | | |
+| Umiejętności i okno trenera: „Na N: X czarów” z kosztem, najbliższy trener z czasem | | | | | |
+| Wyprawy: XP z questów lochu, wejścia N/5, Questy: zbierz / oddaj / zestrojenia | | | | | |
+| Ekwipunek: „Przed Tobą na trasie”, „Skąd zdobyć” po wybraniu przedmiotu; kategorie jak w plecaku | | | | | |
+| Grimuar: karta „Teraz wg Polestara”, questy klasowe | | | | | |
+| Mapa (Miasto), Koło maga, Pas: najbliższe usługi z czasem | | | | | |
+| Quest przyjęty przez Polestara: okno Grimuara się nie otwiera / zamyka; „!” znika z minimapy | | | | | |
 
 Wynik zapisz w CHANGELOG.md przy wersji.

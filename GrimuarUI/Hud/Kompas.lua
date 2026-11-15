@@ -3,7 +3,9 @@
 -- * kierunki Pn / Wsch / Pd / Zach (ten najblizej srodka na zloto), kreski co 11,25°;
 -- * pelny zloty romb + odleglosc = cel strzalki Polestara (takze „Prowadz” z huba, G.wayTo);
 -- * romb w kolorze zadania (te same kolory co mapa huba) = najblizszy cel kazdego zadania na tej mapie, „?” = oddaj;
--- * kropka = najblizsze ziolo (zielona) albo ruda (miedziana), ktore da punkt (GatherMate2, bez odleglosci).
+-- * kropka = najblizsze ziolo (zielona) albo ruda (miedziana), ktore da punkt (GatherMate2, bez odleglosci);
+-- * 15.11 (R30 P04): pelny niebieski romb + odleglosc = „Przy okazji” Polestara (cel z dalszego kroku trasy obok,
+--   Dziennik\DziennikPrzyOkazji.lua U.psHereSpots); prowadzi klik w karte w Dzienniku, kompas dalej nie lapie myszy.
 -- Gdy u gory jest pasek celu (makieta „HUD · Walka”), kompas sie chowa. 15.11 gracz: „kompas tez mi zniknal”: w walce
 -- i w lochu zostaje (bez kierunku z gry jest przezroczysty); /hub kompas walka chowa go w walce.
 -- Pasek tempa Grimuara (GrimuarHUD), jesli go nie przesuwales, schodzi pod kompas.
@@ -18,6 +20,7 @@ local TWO_PI = 2 * math.pi
 local DIRS = { { 0, "Pn" }, { math.pi / 2, "Zach" }, { math.pi, "Pd" }, { -math.pi / 2, "Wsch" } }
 local HERB, ORE = { 0.50, 0.79, 0.35 }, { 0.82, 0.55, 0.32 }
 local MAX_QUESTS, MAX_NODES, NODE_RANGE = 5, 2, 250   -- jardy
+local MAX_HERE = 3                                     -- romby „Przy okazji” Polestara
 local DEDUP = 40                                       -- cel zadania blizej celu Polestara = ten sam punkt
 
 local K = { k = 1, items = {}, vis = {}, built = false, combat = false }
@@ -76,6 +79,25 @@ local function vec(map, x1, y1, x2, y2)
   return math.atan2(-de, -ds), math.sqrt(de * de + ds * ds)
 end
 
+-- 15.11 (R30 P04): punkt na innej mapie (strefa a jaskinia, miasto): przez wspolrzedne swiata (x = pn., y = zach.)
+local function worldPos(map, x, y)
+  if not (CreateVector2D and C_Map.GetWorldPosFromMapPos) then return nil end
+  local c, w = U.call(C_Map.GetWorldPosFromMapPos, map, CreateVector2D(x, y))
+  if not (c and w and w.GetXY) then return nil end
+  local wn, ww = w:GetXY()
+  wn, ww = U.num(wn), U.num(ww)
+  if not (wn and ww) then return nil end
+  return c, wn, ww
+end
+local function vecTo(map, x1, y1, map2, x2, y2)
+  if map2 == map then return vec(map, x1, y1, x2, y2) end
+  local c1, n1, w1 = worldPos(map, x1, y1)
+  local c2, n2, w2 = worldPos(map2, x2, y2)
+  if not (c1 and c2 and c1 == c2) then return nil end
+  local dn, dw = n2 - n1, w2 - w1
+  return math.atan2(dw, dn), math.sqrt(dn * dn + dw * dw)
+end
+
 local function polestarTarget()
   local N = Polestar and Polestar.Nav
   if not (N and N.GetTarget and N.TargetOffset) then return nil end
@@ -116,6 +138,12 @@ local function collect()
     end
     table.sort(ns, function(a, b) return a.d < b.d end)
     for i = 1, math.min(MAX_NODES, #ns) do items[#items + 1] = ns[i] end
+    -- 15.11 (R30 P04): „Przy okazji” Polestara (najblizsze pierwsze, procenty na mapie zywej)
+    local here = U.psHereSpots and U.call(U.psHereSpots)
+    for i, h in ipairs(type(here) == "table" and here or {}) do
+      if i > MAX_HERE then break end
+      items[#items + 1] = { kind = "here", map = h.map, x = h.x / 100, y = h.y / 100, col = C.frost }
+    end
   end
   K.items, K.map = items, map
 end
@@ -210,7 +238,8 @@ local function build()
     if K.acc < 0.03 then return end
     K.acc = 0
     local ok, e = pcall(U.kompasDraw)
-    if not ok then logErr("kompas/draw", e) f:Hide() end
+    -- 15.11: blad rysowania nie chowa kompasu na stale; zapis raz na 60 s, rysowanie probuje dalej
+    if not ok and (not K.errAt or GetTime() - K.errAt > 60) then K.errAt = GetTime() logErr("kompas/draw", e) end
   end)
   K.built = true
 end
@@ -221,9 +250,11 @@ local function measure()
   local tb, td, tn, tw = polestarTarget()
   if tb then vis[#vis + 1] = { kind = "target", b = tb, d = td } end
   local map, px, py = playerPos()
-  if map and map == K.map then
+  if map then
     for _, it in ipairs(K.items) do
-      local b, d = vec(map, px, py, it.x, it.y)
+      local b, d
+      if it.map then b, d = vecTo(map, px, py, it.map, it.x, it.y)
+      elseif map == K.map then b, d = vec(map, px, py, it.x, it.y) end
       if b then
         local dup = false
         if tb and it.kind ~= "node" then
@@ -235,6 +266,15 @@ local function measure()
     end
   end
   K.vis = vis
+  -- 15.11 (R30 P18): czas dojscia do celu strzalki z planera Polestara (Nav.travel.Remaining, co 1 s)
+  if tb and (not K.etaAt or GetTime() - K.etaAt > 1) then
+    K.etaAt, K.eta = GetTime(), nil
+    local T = Polestar and Polestar.Nav and Polestar.Nav.travel
+    if T and T.Remaining then
+      local ok, s = pcall(T.Remaining, td)
+      if ok and type(s) == "number" and s > 0 then K.eta = s end
+    end
+  elseif not tb then K.eta = nil end
   K.measured = GetTime()
 end
 
@@ -287,9 +327,13 @@ function U.kompasDraw()
       m:ClearAllPoints()
       m:SetPoint("TOP", f, "TOP", x, -21 * k)
       m:SetAlpha(a)
-      m:SetFrameLevel(f:GetFrameLevel() + (v.kind == "target" and 20 or (v.kind == "node" and 2 or 10)) - math.min(n, 9))
-      m.rh:SetShown(v.kind == "target" or v.kind == "obj")
+      -- 15.11 (gracz: „zniknal mi kompas, chyba po walce”): przy wielu znacznikach poziom wychodzil ujemny (node: 2 - 9),
+      -- gra zglaszala blad SetFrameLevel, a kompas chowal sie na stale. Podstawa +10 i przyciecie do 0–65535.
+      local lvl = f:GetFrameLevel() + 10 + (v.kind == "target" and 20 or (v.kind == "node" and 2 or (v.kind == "here" and 15 or 10))) - math.min(n, 9)
+      m:SetFrameLevel(math.max(0, math.min(65535, lvl)))
+      m.rh:SetShown(v.kind == "target" or v.kind == "obj" or v.kind == "here")
       if v.kind == "target" then m.rh:Set(C.gold, true)
+      elseif v.kind == "here" then m.rh:Set(C.frost, true)
       elseif v.kind == "obj" then m.rh:Set(v.col or C.text, false) end
       m.q:SetShown(v.kind == "done")
       m.dot:SetShown(v.kind == "node")
@@ -300,8 +344,9 @@ function U.kompasDraw()
       end
       if free then
         used[#used + 1] = x
-        m.num:SetText(U.fmtDistance and U.fmtDistance(v.d * 0.9144) or "")
-        U.Color(m.num, v.kind == "target" and C.gold or C.text)
+        local eta = v.kind == "target" and K.eta and U.G and U.G.etaShort and U.G.etaShort(K.eta)
+        m.num:SetText((U.fmtDistance and U.fmtDistance(v.d * 0.9144) or "") .. (eta and (" · " .. eta) or ""))
+        U.Color(m.num, v.kind == "target" and C.gold or (v.kind == "here" and C.frost or C.text))
         m.num:Show()
       else m.num:Hide() end
       m:Show()
@@ -369,6 +414,8 @@ local function soon(delay)
   end)
 end
 
+U.kompasSoon = function(d) soon(d or 0) end
+
 local ev = CreateFrame("Frame")
 for _, e in ipairs({ "PLAYER_LOGIN", "PLAYER_ENTERING_WORLD", "ZONE_CHANGED_NEW_AREA", "ZONE_CHANGED", "ZONE_CHANGED_INDOORS",
   "QUEST_LOG_UPDATE", "QUEST_TURNED_IN", "SKILL_LINES_CHANGED", "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED" }) do
@@ -382,7 +429,8 @@ ev:SetScript("OnEvent", function(_, event)
       local ok, e = pcall(build)
       if not ok then logErr("kompas/build", e) return end
       apply()
-      C_Timer.NewTicker(2, function() soon(0) end)
+      -- 15.11 (R30 P01): krok i cel Polestara odswiezaja kompas od razu (Hub\PolestarSzyna.lua); zegar zostaje jako zapas
+      C_Timer.NewTicker(5, function() soon(0) end)
       C_Timer.After(5, function() pcall(anchorHud) end)
     end)
   elseif event == "PLAYER_REGEN_DISABLED" then

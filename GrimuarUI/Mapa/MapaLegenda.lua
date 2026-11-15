@@ -231,6 +231,10 @@ local function hlService(key)
     if p:IsShown() and p.d then p:SetAlpha((not key or p.d.kind.key == key) and 1 or 0.2) end
   end
 end
+-- 15.11 (R30 P21): po kazdej policzonej usludze Polestara odswiez legende (jedna funkcja, bez mnozenia odswiezen)
+function L.psRefresh()
+  if U.mapMode() == "miasto" and L.head and L.head:IsVisible() then pcall(U.mapLegendRefresh) end
+end
 -- tryb Miasto: rodzaje postaci na tej mapie, z najblizsza
 local function legendService()
   local M = U.MAP
@@ -251,6 +255,40 @@ local function legendService()
     end
     table.sort(order, function(a, b) return (a.d2 or 0) < (b.d2 or 0) end)
     local max, n = maxRows(), 0
+    -- 15.11 (R30 P21, Q6): na mapie, na ktorej stoisz, najpierw najblizsze uslugi wg Polestara z czasem dojscia
+    -- (MapaUslugi.lua U.psNearby; klik: Polestar prowadzi), potem z Questie te rodzaje, ktorych Polestar nie podal
+    local covered, psTotal = {}, 0
+    if px and U.psNearbyHas and U.psNearbyHas() then
+      U.psNearbyQueue(U.NEARBY_KINDS, L.psRefresh)
+      local ps = {}
+      for _, k in ipairs(U.NEARBY_KINDS) do
+        local e = U.psNearby(k.key)
+        if e then ps[#ps + 1] = { k = k, e = e } end
+      end
+      table.sort(ps, function(a, b) return (a.e.s or 1e9) < (b.e.s or 1e9) end)
+      psTotal = #ps
+      for _, x in ipairs(ps) do
+        if x.k.questie then covered[x.k.questie] = true end
+        if n < math.max(3, max - 2) then
+          n = n + 1
+          local k, e = x.k, x.e
+          put(n, { title = U.psNearbyLabel(k.key) or k.pl, sub = (e.zone or "") .. ((e.sub and e.sub ~= "") and (" · " .. e.sub) or "") .. " · " .. (U.G and U.G.tr and U.G.tr("najbliżej wg Polestara") or "najbliżej wg Polestara"),
+            icon = k.icon,
+            onClick = function()
+              if not U.psNearbyGo(k.key) and e.map and e.x then
+                if U.G and U.G.wayTo then pcall(U.G.wayTo, e.map, tonumber(string.format("%.2f", e.x)), tonumber(string.format("%.2f", e.y)), e.name) end
+              end
+            end,
+            onEnter = function() if k.questie then hlService(k.questie) end end, onLeave = function() hlService(nil) end })
+        end
+      end
+      if psTotal > 0 then L.note:SetText("Najpierw najbliższe wg Polestara (czas dojścia, klik prowadzi) · niżej ważne postacie z tej mapy (Questie)") end
+    end
+    local rest = {}
+    for _, g in ipairs(order) do
+      if not covered[g.kind.key] then rest[#rest + 1] = g end
+    end
+    order = rest
     for _, g in ipairs(order) do
       if n >= max then break end
       n = n + 1
@@ -260,7 +298,7 @@ local function legendService()
         onClick = function() M.guide(b.x, b.y, b.name or g.kind.pl) end,
         onEnter = function() hlService(g.kind.key) end, onLeave = function() hlService(nil) end })
     end
-    finish(n, #order, U.servicesReady and not U.servicesReady() and "Wczytuję postacie z Questie…" or "Brak ważnych postaci na tej mapie.")
+    finish(n, psTotal + #order, U.servicesReady and not U.servicesReady() and "Wczytuję postacie z Questie…" or "Brak ważnych postaci na tej mapie.")
   end)
 end
 

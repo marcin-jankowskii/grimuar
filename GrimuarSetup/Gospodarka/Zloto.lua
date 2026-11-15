@@ -107,10 +107,47 @@ local function matsCount()
   return n
 end
 
+-- 15.11 (R30 P42): dokladny koszt jazdy z Polestara zamiast stalej kwoty w celu na 40 i 60:
+-- Polestar.QoL.Riding.EffectiveCost(tier, frakcja) (QoL\Riding.lua:129: 100 g / 1000 g w miedziakach, -10% od Honored
+-- z frakcja rasy) i Riding.HasRiding(tier) (Riding.lua:70: jazda juz kupiona = bez tego kosztu). Frakcje ras jak
+-- trenerzy jazdy w Riding.lua:89-98 (Gnom: Gnomeregan Exiles, 54). Bez Polestara: stare kwoty z TARGETS.
+local RACE_FACTION = { Human = 72, Dwarf = 47, NightElf = 69, Gnome = 54, Orc = 76, Troll = 530, Tauren = 81, Scourge = 68 }
+local RIDING = {
+  [40] = { tier = 1, base = 100, rest = "trening 40; Dual Spec 50 g można później" },
+  [60] = { tier = 2, base = 1000, rest = "szybki wierzchowiec 200 g; na 60 questy nie dają złota" },
+}
+local function factionName(id)
+  local ok, name = pcall(GetFactionInfoByID, id)
+  return ok and type(name) == "string" and name or nil
+end
+local function withRiding(t)
+  local r = RIDING[t[1]]
+  local R = r and Polestar and Polestar.QoL and Polestar.QoL.Riding
+  if not (R and type(R.EffectiveCost) == "function") then return t end
+  local _, race = UnitRace("player")
+  local fac = RACE_FACTION[race or ""]
+  local ok, cost = pcall(R.EffectiveCost, r.tier, fac)
+  if not ok or type(cost) ~= "number" then return t end
+  local okH, has = false, false
+  if type(R.HasRiding) == "function" then okH, has = pcall(R.HasRiding, r.tier) end
+  has = okH and has == true
+  local g = math.floor(cost / 10000 + 0.5)
+  local delta = has and -r.base or (g - r.base)
+  local lo, hi = math.max(0, t[2] + delta), math.max(1, t[3] + delta)
+  if lo < 1 then lo = hi end
+  local what = r.tier == 1 and "jazda" or "Journeyman Riding"
+  local fname = fac and factionName(fac) or "frakcją rasy"
+  local why
+  if has then why = what .. " już kupiona; " .. r.rest
+  elseif g < r.base then why = what .. " " .. g .. " g (Honored z " .. fname .. ": −10%); " .. r.rest
+  else why = what .. " " .. g .. " g (" .. math.floor(g * 0.9 + 0.5) .. " g od Honored z " .. fname .. "); " .. r.rest end
+  return { t[1], lo, hi, why, riding = has and 0 or g }
+end
+
 local function nextTarget()
   local l = UnitLevel("player") or 1
   for _, t in ipairs(TARGETS) do
-    if l <= t[1] then return t end
+    if l <= t[1] then return withRiding(t) end
   end
 end
 
@@ -124,7 +161,8 @@ end
 local function report()
   local g = goldNow()
   say("złoto: masz " .. fmt(g) .. ".")
-  for _, t in ipairs(TARGETS) do
+  for _, t0 in ipairs(TARGETS) do
+    local t = withRiding(t0)
     local mark = (g >= t[3]) and "ok" or ((g >= t[2]) and "minimum ok" or "brakuje " .. fmt(t[2] - g))
     say("  na " .. t[1] .. ": minimum " .. fmt(t[2]) .. ", cel " .. fmt(t[3]) .. " (" .. t[4] .. ") — " .. mark)
   end

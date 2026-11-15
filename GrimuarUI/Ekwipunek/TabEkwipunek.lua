@@ -1,7 +1,8 @@
 -- Grimuar UI: zakladka Ekwipunek (15.11, research R28 P8–P10, makieta „Ekwipunek Grimuara” warianty B i C, wybor gracza
 -- „wszystko po kolei”). Trzy kolumny jak Postac:
 -- * lewo: lalka (sloty z ikona i ramka jakosci) i statystyki „teraz” oraz „po”, gdy wybrany przedmiot da sie zalozyc;
--- * srodek: plecak jako siatka (filtry: Wszystko, Do walki, Sprzet, Profesje, Questy, Smieci) albo lista (C: kolumny
+-- * srodek: plecak jako siatka (filtry jak grupy plecaka Grimuara na Baganatorze, PlecakRuny.lua: Do walki, Questy,
+--   Sprzet, Gotowanie, Tkaniny, Ziola i ruda, Receptury, Materialy, Inne, Smieci; puste sie chowaja) albo lista (C: kolumny
 --   Przedmiot, Typ, Ile, Gdzie, Kupiec, AH, Status; sortowanie kliknieciem; torby, bank i inne postacie z Syndicatora);
 -- * prawo: karta przedmiotu: nazwa, typ, wartosc, do czego potrzebny (◆ poradnik Polestara), znak gracza (★ / smiec),
 --   porownanie z zalozonym (roznica statystyk, Pawn), gdzie jeszcze (Syndicator), akcje: Zaloz (poza walka), Ulubione,
@@ -27,28 +28,43 @@ local LOC = { INVTYPE_HEAD = { 1 }, INVTYPE_NECK = { 2 }, INVTYPE_SHOULDER = { 3
 local STATS = { { "ITEM_MOD_INTELLECT_SHORT", "Intelekt" }, { "ITEM_MOD_STAMINA_SHORT", "Wytrzymałość" },
   { "ITEM_MOD_SPIRIT_SHORT", "Duch" }, { "ITEM_MOD_AGILITY_SHORT", "Zręczność" }, { "ITEM_MOD_STRENGTH_SHORT", "Siła" },
   { "RESISTANCE0_NAME", "Pancerz" }, { "ITEM_MOD_SPELL_POWER_SHORT", "Moc czarów" } }
-local FILTERS = { { "all", "Wszystko" }, { "walka", "Do walki" }, { "sprzet", "Sprzęt" }, { "prof", "Profesje" },
-  { "quest", "Questy" }, { "smieci", "Śmieci" } }
+-- 15.11 (gracz: „w ekwipunku powinny byc co najmniej takie same kategorie jak przy postaci”): te same grupy i ta sama
+-- kolejnosc co w plecaku (GrimuarSetup Wyglad\PlecakRuny.lua, kategorie v4)
+local FILTERS = { { "all", "Wszystko" }, { "walka", "Do walki" }, { "quest", "Questy" }, { "sprzet", "Sprzęt" },
+  { "gotowanie", "Gotowanie" }, { "tkaniny", "Tkaniny" }, { "ziola", "Zioła i ruda" }, { "receptury", "Receptury" },
+  { "materialy", "Materiały" }, { "inne", "Inne" }, { "smieci", "Śmieci" } }
+local ORDER = {}
+for i, f in ipairs(FILTERS) do ORDER[f[1]] = i end
 
 local function money(c) return U.money and U.money(c) or tostring(c) end
 local function sellPrice(id)
   local ok, v = pcall(function() return select(11, C_Item.GetItemInfo(id)) end)
   return (ok and U.num(v)) or 0
 end
+-- klasy i podklasy przedmiotow jak slowa kluczowe Baganatora w PlecakRuny.lua: materialy (7): 8 mieso = Gotowanie,
+-- 5 tkanina = Tkaniny, 7 metal i kamien albo 9 ziolo = Ziola i ruda; 9 = Receptury; 5 = odczynniki (Materialy);
+-- Hearthstone (6948) do walki jak w plecaku
 local function groupOf(it)
   if G.itemIsJunk and G.itemIsJunk(it.id, it.q) then return "smieci" end
-  local c = it.cls
+  local c, s = it.cls, it.sub
   if c == 12 then return "quest" end
   if c == 2 or c == 4 then return "sprzet" end
-  if c == 0 then return "walka" end
-  if c == 7 or c == 9 or c == 5 then return "prof" end
+  if c == 0 or it.id == 6948 then return "walka" end
+  if c == 7 then
+    if s == 8 then return "gotowanie" end
+    if s == 5 then return "tkaniny" end
+    if s == 7 or s == 9 then return "ziola" end
+    return "materialy"
+  end
+  if c == 9 then return "receptury" end
+  if c == 5 then return "materialy" end
   return "inne"
 end
 
 -- ---------- dane ----------
 local function instant(id)
-  local ok, _, _, _, loc, icon, cls = pcall(C_Item.GetItemInfoInstant, id)
-  if ok then return loc, icon, cls end
+  local ok, _, _, _, loc, icon, cls, sub = pcall(C_Item.GetItemInfoInstant, id)
+  if ok then return loc, icon, cls, sub end
 end
 local function bagItems()
   local by, list = {}, {}
@@ -58,8 +74,8 @@ local function bagItems()
       if type(info) == "table" and info.itemID then
         local it = by[info.itemID]
         if not it then
-          local loc, icon, cls = instant(info.itemID)
-          it = { id = info.itemID, link = info.hyperlink, n = 0, q = info.quality, icon = info.iconFileID or icon, cls = cls, loc = loc,
+          local loc, icon, cls, sub = instant(info.itemID)
+          it = { id = info.itemID, link = info.hyperlink, n = 0, q = info.quality, icon = info.iconFileID or icon, cls = cls, sub = sub, loc = loc,
             bag = bag, slot = slot, where = "torby" }
           by[info.itemID] = it
           list[#list + 1] = it
@@ -93,8 +109,8 @@ local function allItems()
         if type(s) == "table" and s.itemID then
           local it = by[s.itemID]
           if not it then
-            local loc, icon, cls = instant(s.itemID)
-            it = { id = s.itemID, link = s.itemLink, n = 0, q = s.quality, icon = icon, cls = cls, loc = loc, where = whereLabel }
+            local loc, icon, cls, sub = instant(s.itemID)
+            it = { id = s.itemID, link = s.itemLink, n = 0, q = s.quality, icon = icon, cls = cls, sub = sub, loc = loc, where = whereLabel }
             by[s.itemID] = it
             rows[#rows + 1] = it
           end
@@ -355,7 +371,20 @@ local function drawCard(it)
   local P = S.card
   P:Begin(P.cardId == (it and it.id))
   P.cardId = it and it.id
-  if not it then P:Para("Kliknij przedmiot w siatce albo na liście.", C.muted) P:End() return end
+  -- 15.11 (R30 P34): ulepszenia przed Toba na trasie Polestara (EkwipunekPolestar.lua)
+  local function ahead(limit)
+    local up = U.psUpgradeCards and U.call(U.psUpgradeCards, limit) or {}
+    if #up > 0 then
+      P:Head("Przed Tobą na trasie", "nagrody z questów lepsze od założonych")
+      P:Cards(up, { cols = 1 })
+    end
+  end
+  if not it then
+    P:Para("Kliknij przedmiot w siatce albo na liście.", C.muted)
+    ahead(5)
+    P:End()
+    return
+  end
   local name = U.call(C_Item.GetItemNameByID, it.id) or it.nm or ("przedmiot " .. it.id)
   local _, itemType, itemSub = U.call(C_Item.GetItemInfoInstant, it.id)
   P:Title(U.hex(U.QUALITY[it.q or 1] or C.text) .. name .. "|r", (itemSub or itemType or "") .. (it.n > 1 and (" · " .. it.n .. " szt.") or "") ..
@@ -393,6 +422,8 @@ local function drawCard(it)
       if #chips > 0 then P:Head("Gdzie jeszcze") P:Chips(chips) end
     end
   end
+  -- 15.11 (R30 P28): skad zdobyc i „Prowadź po to” z Polestara (liczone po wybraniu przedmiotu, EkwipunekPolestar.lua)
+  if U.psSourceBlocks then pcall(U.psSourceBlocks, P, it.id, name) end
   -- akcje
   P:Head("Akcje")
   local m = G.itemMark and G.itemMark(it.id)
@@ -406,6 +437,7 @@ local function drawCard(it)
   P:Button(m == "fav" and "★ Usuń z ulubionych" or "★ Ulubione (nigdy do śmieci)", function() if G.itemMarkSet then G.itemMarkSet(it.id, m ~= "fav" and "fav" or nil) end end)
   P:Button(m == "junk" and "To nie śmieć" or "Oznacz jako śmieć", function() if G.itemMarkSet then G.itemMarkSet(it.id, m ~= "junk" and "junk" or nil) end end)
   if it.link then P:Button("Link na czat", function() pcall(ChatEdit_InsertLink, it.link) end) end
+  ahead(3)
   P:End()
 end
 
@@ -419,8 +451,7 @@ function U.ekwipunekRefresh()
     counts[g] = (counts[g] or 0) + 1
     if S.filter == "all" or S.filter == g then shown[#shown + 1] = it end
   end
-  -- kolejnosc w siatce jak w plecaku: do walki, questy, sprzet, profesje, inne, smieci
-  local ORDER = { walka = 1, quest = 2, sprzet = 3, prof = 4, inne = 5, smieci = 6 }
+  -- kolejnosc w siatce jak w plecaku (ORDER z FILTERS)
   if S.view ~= "list" then
     table.sort(shown, function(a, b)
       local ga, gb = ORDER[groupOf(a)] or 9, ORDER[groupOf(b)] or 9
@@ -429,11 +460,26 @@ function U.ekwipunekRefresh()
       return a.id < b.id
     end)
   end
-  for k, b in pairs(S.chips) do
-    b:SetLabel(b.title .. "  " .. (counts[k] or 0))
-    U.Color(b.label, k == S.filter and C.gold or C.muted)
-    U.BorderColor(b, k == S.filter and C.gold or C.edge)
+  -- filtry: puste grupy sie chowaja (jak w plecaku), poza „Wszystko” i wybranym; zawijanie do drugiego rzedu
+  if S.filter ~= "all" and (counts[S.filter] or 0) == 0 then S.filter = "all" return U.ekwipunekRefresh() end
+  local maxW = math.max(200, (S.chipBar:GetWidth() or 600))
+  local x, row = 0, 0
+  for _, f in ipairs(FILTERS) do
+    local k, b = f[1], S.chips[f[1]]
+    local show = k == "all" or k == S.filter or (counts[k] or 0) > 0
+    b:SetShown(show)
+    if show then
+      b:SetLabel(b.title .. "  " .. (counts[k] or 0))
+      U.Color(b.label, k == S.filter and C.gold or C.muted)
+      U.BorderColor(b, k == S.filter and C.gold or C.edge)
+      local w = b:GetWidth() or 80
+      if x > 0 and x + w > maxW then x, row = 0, row + 1 end
+      b:ClearAllPoints()
+      b:SetPoint("TOPLEFT", S.chipBar, "TOPLEFT", x, -row * 30)
+      x = x + w + 6
+    end
   end
+  S.chipBar:SetHeight((row + 1) * 30 - 6)
   S.vGrid:SetLabel((S.view == "grid" and "◆ " or "") .. "Siatka")
   S.vList:SetLabel((S.view == "list" and "◆ " or "") .. "Lista")
   S.gridView:SetShown(S.view == "grid")
@@ -501,20 +547,21 @@ local function build(page)
   S.vGrid = U.Button(mid, "Siatka", nil, 24)
   S.vGrid:SetPoint("RIGHT", S.vList, "LEFT", -6, 0)
   S.vGrid:SetScript("OnClick", function() S.view = "grid" U.ekwipunekRefresh() end)
-  local prev
+  S.chipBar = CreateFrame("Frame", nil, mid)
+  S.chipBar:SetPoint("TOPLEFT", mh, "BOTTOMLEFT", 0, -10)
+  S.chipBar:SetPoint("RIGHT", mid, "RIGHT", -16, 0)
+  S.chipBar:SetHeight(24)
   for _, f in ipairs(FILTERS) do
-    local b = U.Button(mid, f[2], nil, 24)
+    local b = U.Button(S.chipBar, f[2], nil, 24)
     b.title = f[2]
-    if prev then b:SetPoint("LEFT", prev, "RIGHT", 6, 0) else b:SetPoint("TOPLEFT", mh, "BOTTOMLEFT", 0, -10) end
     b:SetScript("OnClick", function() S.filter = f[1] U.ekwipunekRefresh() end)
     S.chips[f[1]] = b
-    prev = b
   end
   S.sum = U.Text(mid, 12, "body", C.muted)
   S.sum:SetPoint("BOTTOMLEFT", 18, 14)
   -- siatka
   local gv = CreateFrame("ScrollFrame", nil, mid)
-  gv:SetPoint("TOPLEFT", S.chips.all, "BOTTOMLEFT", 0, -12)
+  gv:SetPoint("TOPLEFT", S.chipBar, "BOTTOMLEFT", 0, -12)
   gv:SetPoint("BOTTOMRIGHT", -16, 40)
   S.grid = CreateFrame("Frame", nil, gv)
   S.grid:SetSize(400, 10)
@@ -527,7 +574,7 @@ local function build(page)
   S.gridView = gv
   -- lista
   local lv = CreateFrame("Frame", nil, mid)
-  lv:SetPoint("TOPLEFT", S.chips.all, "BOTTOMLEFT", 0, -12)
+  lv:SetPoint("TOPLEFT", S.chipBar, "BOTTOMLEFT", 0, -12)
   lv:SetPoint("BOTTOMRIGHT", -16, 40)
   S.listView = lv
   S.heads = {}

@@ -4,7 +4,7 @@
 ## Notes-enUS: Grimuar: settings, builds, step-by-step guidance, guide window, tutorial. Shift+G, /gr
 ## Author: Grimuar
 ## X-License: GPL-3.0
-## Version: 5.8.0
+## Version: 5.9.0
 ## SavedVariables: GrimuarSetupDB
 ## OptionalDeps: Grimuar_Osobiste, Masque, Polestar
 Build\Api.lua
@@ -20,6 +20,7 @@ Rdzen\Core.lua
 Rdzen\Style.lua
 Rdzen\Engine.lua
 Prowadzenie\Prowadzenie.lua
+Prowadzenie\Miejsca.lua
 Prowadzenie\Kroki.lua
 Prowadzenie\Dock.lua
 Okno\PanelStrony.lua

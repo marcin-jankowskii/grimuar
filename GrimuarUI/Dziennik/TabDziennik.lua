@@ -345,6 +345,9 @@ local function detailsProf(t)
 end
 
 local function details(q)
+  -- 15.11 (R30 P04): „Przy okazji i za Toba” jako karty zamiast pergaminu (DziennikPrzyOkazji.lua)
+  if U.psNearShow then U.psNearShow(D, q ~= nil and q.near ~= nil) end
+  if q and q.near then return end
   if q and q.take then return detailsTake(q.take) end
   if q and q.prof then return detailsProf(q.prof) end
   D.descLab:SetText("Opis")
@@ -453,7 +456,10 @@ local function details(q)
   D.bWatch:SetOn(w)
   D.bWatch:SetScript("OnClick", function() setWatch(q, not w) C_Timer.After(0.1, function() pcall(D.refresh) end) end)
   -- Prowadz: strzalka Polestara do najblizszego celu (gotowe: do oddajacego) i hub sie zamyka, zebys biegl
-  D.bGuide:SetLabel(q.complete and "Prowadź do oddania" or "Prowadź")
+  -- 15.11 (R30 P18): czas dojscia z planera Polestara na przycisku
+  local spot = (U.polestarSpot and U.polestarSpot(q.id, q.complete)) or (U.questBest and U.questBest(q.id))
+  local etaS = spot and spot.map and spot.x and G.etaText and G.etaText(spot.map, spot.x * 100, spot.y * 100) or ""
+  D.bGuide:SetLabel((q.complete and "Prowadź do oddania" or "Prowadź") .. etaS)
   D.bGuide:SetScript("OnClick", function()
     local t = (U.polestarSpot and U.polestarSpot(q.id, q.complete)) or (U.questBest and U.questBest(q.id))
     if not t then U.say("Ani Polestar, ani Questie nie znają miejsca tego zadania. Zobacz opis.") return end
@@ -501,6 +507,12 @@ local function arrange(log)
     out[#out + 1] = { header = true, title = "Teraz wg Polestara", special = true }
     for _, q in ipairs(now) do out[#out + 1] = q end
   end
+  -- 15.11 (R30 P04): cele z dalszych krokow w poblizu i questy, ktore trasa minela (karty po kliknieciu)
+  local near = U.psNearRow and U.call(U.psNearRow)
+  if near then
+    out[#out + 1] = { header = true, title = "Przy okazji i za Tobą", special = true }
+    out[#out + 1] = { id = "psnear", near = near, title = near.title }
+  end
   for _, q in ipairs(rest) do if q then out[#out + 1] = q end end
   -- 14.11: zadania profesji Grimuara (zbierz / zrob / do trenera / sprzedaj)
   local pt = U.profTasks and U.profTasks() or {}
@@ -542,7 +554,7 @@ function D.refresh()
   local first, found, nTake = nil, false, 0
   for _, q in ipairs(all) do
     if not q.header then
-      first = first or q
+      if not q.near then first = first or q end -- karty „Przy okazji” tylko na klik
       if q.id == D.sel then found = true end
       if q.take then nTake = nTake + 1 end
     end
@@ -573,9 +585,12 @@ function D.refresh()
       r.title:SetText(q.title)
       U.Color(r.title, q.id == D.sel and C.gold or C.text)
       local a, b = 0, 0
-      if not q.take and not q.prof then a, b = progress(q.id) end
+      if not q.take and not q.prof and not q.near then a, b = progress(q.id) end
       local adv = not q.take and D.adv[q.id]
-      if q.prof then
+      if q.near then
+        U.Color(r.title, q.id == D.sel and C.gold or C.frost)
+        r.tag:SetTag(q.near.tag or "", C.frost)
+      elseif q.prof then
         U.Color(r.title, q.id == D.sel and C.gold or C.text)
         r.tag:SetTag(q.prof.tag or q.prof.group or "", q.prof.group == "Sprzedaj" and C.muted or C.gold)
       elseif q.take then
@@ -622,6 +637,9 @@ function U.questShow(id)
   D.sel = id
   U.Select("dziennik")
 end
+
+-- 15.11 (R30 P01): odswiezenie bez przewijania na zdarzenie Polestara (Hub\PolestarSzyna.lua)
+function U.dziennikSoft() if D.refresh then D.refresh() end end
 
 U.RegisterTab({
   id = "dziennik", order = 3, title = "Dziennik", keys = "J · L",
